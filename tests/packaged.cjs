@@ -8,7 +8,7 @@ const path=require('node:path');
   let app;
   try{
     const env={...process.env,SALARY_PET_PROFILE:profile};delete env.ELECTRON_RUN_AS_NODE;
-    app=await electron.launch({executablePath:path.resolve('../release/SalaryPet-win32-x64/SalaryPet.exe'),args:[],env});
+    app=await electron.launch({executablePath:process.env.SALARY_PET_EXECUTABLE||path.resolve('../release/SalaryPet-win32-x64/SalaryPet.exe'),args:[],env});
     const form=app.windows().find(p=>p.url().endsWith('settings.html'))??await app.waitForEvent('window',p=>p.url().endsWith('settings.html'));
     await form.locator('#salary').waitFor();assert.equal(await form.locator('#salary').inputValue(),'');
     const state=await form.evaluate(()=>window.petAPI.getState());assert.equal(state.config,null);

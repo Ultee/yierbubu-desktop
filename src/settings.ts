@@ -47,7 +47,7 @@ document.getElementById('form')!.addEventListener('submit',async event=>{
   try{
     const result=await window.petAPI.save(config);
     if(!result.ok){error(result.field??'general',result.error??'保存失败');return;}
-    input('salary').value=(config.salaryCents/100).toFixed(2);document.getElementById('notice')!.textContent='已保存，小猫会按新设置计算收入。';document.getElementById('warning')!.hidden=true;
+    input('salary').value=(config.salaryCents/100).toFixed(2);document.getElementById('notice')!.textContent='已保存，一二会按新设置计算收入。';document.getElementById('warning')!.hidden=true;
   }catch{error('general','保存失败，请稍后重试。');}finally{button.disabled=false;}
 });
 for(const id of ['start','end','lunch-enabled','lunch-start','lunch-end'])input(id).addEventListener('change',summary);

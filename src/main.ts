@@ -39,9 +39,15 @@ const menu=()=>Menu.buildFromTemplate([{label:'设置月薪与作息',click:open
 function icon(){
   const pixels=Buffer.alloc(16*16*4);
   for(let y=0;y<16;y++) for(let x=0;x<16;x++) {
-    const head=(y>=5&&y<=13&&x>=2&&x<=13)||((x>=2&&x<=5||x>=10&&x<=13)&&y>=2&&y<=5);
-    const eye=y===8&&(x===5||x===10);
-    if(head){const i=(y*16+x)*4;pixels[i]=eye?52:148;pixels[i+1]=eye?62:204;pixels[i+2]=eye?54:239;pixels[i+3]=255;}
+    const ear=(x-3)**2+(y-3)**2<=5||(x-12)**2+(y-3)**2<=5;
+    const radius=((x-7.5)/6.5)**2+((y-8)/5.6)**2;
+    const head=radius<=1,body=y>=12&&y<=15&&x>=5&&x<=10;
+    if(ear||head||body){
+      const eye=y===8&&(x===5||x===10),cheek=y===10&&(x===4||x===11);
+      const dark=eye||(!head&&ear)||(head&&radius>.76);
+      const color=dark?[45,49,80]:cheek?[175,180,245]:[253,254,255];
+      const i=(y*16+x)*4;pixels[i]=color[0];pixels[i+1]=color[1];pixels[i+2]=color[2];pixels[i+3]=255;
+    }
   }
   return nativeImage.createFromBitmap(pixels,{width:16,height:16});
 }
@@ -56,7 +62,7 @@ app.whenReady().then(()=>{
   protect(pet);pet.setAlwaysOnTop(true,'floating');pet.setIgnoreMouseEvents(true,{forward:true});pet.loadFile(join(__dirname,'pet.html'));
   pet.once('ready-to-show',()=>pet?.showInactive());
   pet.on('move',()=>{if(positionTimer)clearTimeout(positionTimer);positionTimer=setTimeout(persistPosition,350);});
-  tray=new Tray(icon());tray.setToolTip('秒薪桌宠 · 鼠标移到小猫上查看收入');tray.setContextMenu(menu());tray.on('double-click',openSettings);
+  tray=new Tray(icon());tray.setToolTip('秒薪桌宠 · 鼠标移到一二上查看收入');tray.setContextMenu(menu());tray.on('double-click',openSettings);
   const reposition=()=>{if(pet){const [x,y]=pet.getPosition();pet.setPosition(...Object.values(clamped(x,y)) as [number,number]);}};
   screen.on('display-removed',reposition);screen.on('display-metrics-changed',reposition);powerMonitor.on('resume',broadcast);
   if(!data.config)openSettings();
