@@ -1,0 +1,16 @@
+:root {font-family:"Segoe UI","Microsoft YaHei",sans-serif;color:#2c4035;font-synthesis:none}
+* {box-sizing:border-box}body{margin:0;background:transparent;overflow:hidden;user-select:none;width:320px;height:350px}
+button{font:inherit}button:focus-visible{outline:2px solid #6a8a73;outline-offset:2px}
+#island{position:relative;width:100%;height:100%}
+#card{position:absolute;left:16px;right:16px;bottom:142px;padding:16px 18px 14px;border-radius:20px;border:1px solid #e4e9df;background:#fcfdf9;box-shadow:0 8px 22px #233b2920;animation:reveal .15s ease-out}
+[hidden]{display:none!important}header,.rate-line,footer{display:flex;align-items:center;justify-content:space-between;gap:6px}header{margin-bottom:16px}
+.brand{font-size:12px;letter-spacing:1px;font-weight:600;color:#647a68;display:flex;align-items:center;gap:6px}.dot{width:6px;height:6px;border-radius:100%;background:#89a784}
+#open-settings{border:0;background:#eef2e8;border-radius:9px;width:27px;height:27px;color:#6b7b63;cursor:pointer;font-size:17px}
+#open-settings:hover{background:#e1e9d8}.eyebrow{font-size:11px;color:#859080;display:flex;justify-content:space-between;align-items:center}
+#state-label{font-size:10px;color:#718769;background:#eef2e7;padding:3px 7px;border-radius:6px}
+.amount{display:flex;align-items:baseline;gap:5px;margin:5px 0 10px;font-variant-numeric:tabular-nums}.currency{font-size:21px;color:#6a8063}strong{font-size:38px;line-height:1.1;letter-spacing:-1.5px;font-weight:600}
+.rate-line{font-size:10px;color:#8a9383}#rate{font-variant-numeric:tabular-nums;font-size:11px;color:#61775c}.divider{height:1px;background:#e9ecdf;margin:12px 0 10px}footer{font-size:11px;color:#7b8972}#countdown{font-variant-numeric:tabular-nums;color:#5c7459}#warning{font-size:10px;color:#af6b4d;margin:8px 0 0}
+#bridge{position:absolute;left:72px;right:72px;bottom:127px;height:22px;display:none}body.expanded #bridge{display:block}
+#pet{position:absolute;bottom:5px;left:70px;width:180px;height:140px;cursor:grab;touch-action:none}#pet.dragging{cursor:grabbing}svg{width:100%;height:100%;overflow:visible}.cat{transform-origin:90px 128px;animation:breathe 3.8s ease-in-out infinite}.eyes{transform-origin:90px 70px;animation:blink 5.5s infinite}.tail{transform-origin:131px 107px;animation:tail 4s ease-in-out infinite}#pet.dragging .cat{animation:none;transform:rotate(-4deg)}
+@keyframes breathe{50%{transform:translateY(-2px) scaleY(1.015)}}@keyframes blink{0%,42%,46%,100%{transform:scaleY(1)}44%{transform:scaleY(.1)}}@keyframes tail{50%{transform:rotate(-8deg)}}@keyframes reveal{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.cat,.eyes,.tail,#card{animation:none}}

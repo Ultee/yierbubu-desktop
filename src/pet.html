@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'none'"><title>秒薪桌宠</title><link rel="stylesheet" href="pet.css"></head>
+<body><main id="island">
+  <section id="card" aria-label="今日收入" hidden>
+    <header><span class="brand"><span class="dot"></span> 秒薪桌宠</span><button id="open-settings" title="设置月薪与作息" aria-label="设置">⚙</button></header>
+    <div class="eyebrow">今日已赚 <span id="state-label">等待设置</span></div>
+    <div class="amount"><span class="currency">¥</span><strong id="earned">0.00</strong></div>
+    <div class="rate-line"><span>每一秒，都有收获</span><span id="rate">—</span></div>
+    <div class="divider"></div>
+    <footer><span id="status">请先设置月薪与作息</span><span id="countdown"></span></footer>
+    <p id="warning" hidden></p>
+  </section>
+  <div id="bridge"></div>
+  <div id="pet" role="img" aria-label="秒薪小猫，悬停查看收入，拖动移动位置，右键打开菜单" tabindex="-1">
+    <svg viewBox="0 0 180 145" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <ellipse class="shadow" cx="91" cy="132" rx="51" ry="7" fill="#354b3e" opacity=".13"/>
+      <g class="cat">
+        <path class="tail" d="M129 110 C166 114 167 80 153 83 C143 85 154 105 130 100" fill="#e8bd86" stroke="#715d49" stroke-width="3" stroke-linecap="round"/>
+        <path d="M55 89 C48 102 49 120 61 126 Q89 137 122 126 C134 117 129 98 119 87" fill="#efcfa1" stroke="#715d49" stroke-width="3"/>
+        <ellipse cx="89" cy="111" rx="24" ry="20" fill="#fff1d8"/>
+        <path d="M48 63 L44 22 Q45 12 55 19 L76 36 Q91 31 106 36 L127 19 Q138 13 138 25 L135 65" fill="#efcfa1" stroke="#715d49" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M51 29 L54 48 L68 39Z M129 29 L115 40 L131 49Z" fill="#e5a899"/>
+        <path d="M47 60 C42 89 60 102 91 103 C123 103 140 87 136 61 C132 43 115 37 92 37 C69 37 51 44 47 60Z" fill="#f3d9b0" stroke="#715d49" stroke-width="3"/>
+        <path d="M78 39 L81 50 M91 37 L91 49 M103 39 L101 50" stroke="#d6a56f" stroke-width="5" stroke-linecap="round"/>
+        <g class="eyes" stroke="#594d41" stroke-width="4" stroke-linecap="round"><path d="M66 66 L66 73 M115 66 L115 73"/></g>
+        <ellipse cx="61" cy="80" rx="9" ry="5" fill="#eab1a1" opacity=".65"/><ellipse cx="120" cy="80" rx="9" ry="5" fill="#eab1a1" opacity=".65"/>
+        <path d="M86 77 Q91 73 96 77 L91 82Z" fill="#b57f72"/><path d="M91 82 Q88 89 83 84 M91 82 Q94 89 99 84" fill="none" stroke="#715d49" stroke-width="2" stroke-linecap="round"/>
+        <g stroke="#a98a69" stroke-width="1.5" stroke-linecap="round"><path d="M52 76 L36 72 M52 83 L35 85 M130 76 L146 72 M131 83 L148 86"/></g>
+        <path d="M64 115 L62 129 Q71 135 79 130 L80 118 M103 118 L104 130 Q115 135 122 128 L119 115" fill="#f3d9b0" stroke="#715d49" stroke-width="2.5" stroke-linecap="round"/>
+        <path d="M63 99 Q91 110 121 98" fill="none" stroke="#77977e" stroke-width="5"/>
+        <circle cx="93" cy="107" r="6" fill="#d5ad58" stroke="#a48542" stroke-width="1.5"/><path d="M93 106 L93 110" stroke="#a48542" stroke-width="1.5"/>
+      </g>
+    </svg>
+  </div>
+</main><script src="pet.js"></script></body></html>

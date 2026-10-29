@@ -1,0 +1,27 @@
+{
+  "name": "salary-pet",
+  "productName": "SalaryPet",
+  "version": "1.0.0",
+  "private": true,
+  "description": "本地运行的秒薪桌宠",
+  "author": "Salary Pet",
+  "license": "MIT",
+  "main": "dist/main.cjs",
+  "scripts": {
+    "test": "node --experimental-strip-types --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "build": "node scripts/build.mjs",
+    "start": "npm run build && electron .",
+    "test:desktop": "node tests/desktop.cjs",
+    "package": "npm run build && node scripts/package.mjs"
+  },
+  "type": "module",
+  "devDependencies": {
+    "@electron/packager": "^20.3.0",
+    "@types/node": "^26.6.6",
+    "electron": "^45.1.0",
+    "esbuild": "^0.28.2",
+    "playwright-core": "^1.64.1",
+    "typescript": "^7.0.2"
+  }
+}

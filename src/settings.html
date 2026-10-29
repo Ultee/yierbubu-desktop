@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'none'"><meta name="viewport" content="width=device-width,initial-scale=1"><title>秒薪桌宠 · 设置</title><link rel="stylesheet" href="settings.css"></head>
+<body><div class="layout">
+  <header class="top"><div class="logo">猫</div><div><div class="overline">SALARY PET</div><h1>让工作的每一秒，看得见。</h1><p>设置好月薪与作息，小猫陪你看收入慢慢增长。</p></div><span class="local"><span></span> 仅保存在本机</span></header>
+  <main><form id="form" novalidate>
+    <section class="panel"><div class="section-title"><span class="number">01</span><h2>你的月薪</h2><span class="tag">到手收入</span></div>
+      <label for="salary">税后月薪（实发）</label><div class="salary-input"><span>¥</span><input id="salary" name="salary" type="text" inputmode="decimal" placeholder="例如 8000.00" autocomplete="off" maxlength="12"><span>元 / 月</span></div><div class="error" data-error="salary"></div>
+      <p class="hint">扣除个税及个人承担的五险一金后，实际到账的固定工资。<br>暂不包含报销、年终奖和不固定奖金。</p>
+    </section>
+    <section class="panel"><div class="section-title"><span class="number">02</span><h2>工作的节奏</h2></div>
+      <label>每周工作日</label><div class="weekdays" id="weekdays">
+        <label><input type="checkbox" value="1" checked><span>周一</span></label><label><input type="checkbox" value="2" checked><span>周二</span></label><label><input type="checkbox" value="3" checked><span>周三</span></label><label><input type="checkbox" value="4" checked><span>周四</span></label><label><input type="checkbox" value="5" checked><span>周五</span></label><label><input type="checkbox" value="6"><span>周六</span></label><label><input type="checkbox" value="0"><span>周日</span></label>
+      </div><div class="error" data-error="weekdays"></div>
+      <div class="time-grid"><div><label for="start">上班时间</label><input type="time" id="start" value="09:00"><div class="error" data-error="start"></div></div><span class="time-separator">—</span><div><label for="end">下班时间</label><input type="time" id="end" value="18:00"><div class="error" data-error="end"></div></div></div>
+      <div class="lunch-title"><label for="lunch-enabled">午休暂停累计</label><input type="checkbox" id="lunch-enabled" role="switch" checked></div>
+      <div class="time-grid" id="lunch-fields"><div><label for="lunch-start">午休开始</label><input type="time" id="lunch-start" value="12:00"></div><span class="time-separator">—</span><div><label for="lunch-end">午休结束</label><input type="time" id="lunch-end" value="13:00"></div></div><div class="error" data-error="lunch"></div>
+      <div class="schedule-summary" id="summary">每天有效工作 8 小时 · 午休不计入</div>
+    </section>
+    <section class="panel"><div class="section-title"><span class="number">03</span><h2>节假日与调休</h2><span class="optional">按需添加</span></div><p class="hint">指定日期优先于每周安排。法定节假日需自行添加。</p>
+      <div class="override-controls"><div><label for="override-date">日期</label><input id="override-date" type="date"></div><div><label for="override-type">安排</label><select id="override-type"><option value="rest">休息日</option><option value="work">工作日</option></select></div><button type="button" id="add-override" class="secondary">＋ 添加</button></div>
+      <div class="error" data-error="overrides"></div><div id="overrides"></div>
+    </section>
+    <p class="explanation">秒薪 = 税后月薪 ÷ 当月有效工作总秒数。<br>这是按排班均摊的收入估算；修改月薪或排班会重新计算当天金额。</p>
+    <div class="error" data-error="general" role="alert"></div><p id="warning" class="warning" hidden></p>
+    <div id="notice" role="status" aria-live="polite"></div>
+    <footer class="actions"><span>设置后，移到小猫上查看今日收入</span><div><button type="button" id="close" class="secondary">关闭</button><button type="submit" id="save" class="primary">保存设置 <span>↗</span></button></div></footer>
+  </form></main>
+</div><script src="settings.js"></script></body></html>
