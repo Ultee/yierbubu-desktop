@@ -14,7 +14,7 @@ const path=require('node:path');
   };
   try{
     await fs.mkdir('test-results',{recursive:true});application=await launch();
-    const settings=await application.waitForEvent('window',page=>page.url().endsWith('settings.html')).catch(()=>null);
+    const settings=application.windows().find(p=>p.url().endsWith('settings.html'))??await application.waitForEvent('window',page=>page.url().endsWith('settings.html')).catch(()=>null);
     const form=settings||application.windows().find(p=>p.url().endsWith('settings.html'));
     assert.ok(form,'first launch should open setup');
     form.setDefaultTimeout(6000);
@@ -44,7 +44,7 @@ const path=require('node:path');
     const after=await application.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('pet.html')).getPosition());
     assert.notDeepEqual(after,before,'dragging must move native window');
     await pet.locator('#pet').hover();await pet.locator('#open-settings').click();
-    const settings2=await application.waitForEvent('window').catch(()=>null);
+    const settings2=application.windows().find(p=>p.url().endsWith('settings.html'))??await application.waitForEvent('window').catch(()=>null);
     const form2=settings2||application.windows().find(p=>p.url().endsWith('settings.html'));
     await form2.locator('#salary').waitFor();assert.equal(await form2.locator('#salary').inputValue(),'10000.00');
     const today=await form2.evaluate(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;});
