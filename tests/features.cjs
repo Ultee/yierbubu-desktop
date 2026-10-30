@@ -1,6 +1,7 @@
 const {_electron:electron}=require('playwright-core');
 const assert=require('node:assert/strict');
 const fs=require('node:fs/promises');const os=require('node:os');const path=require('node:path');
+const {toggleIncome}=require('./income-menu.cjs');
 (async()=>{
   const profile=await fs.mkdtemp(path.join(os.tmpdir(),'salary-pet-features-'));let app;
   try{
@@ -43,7 +44,7 @@ const fs=require('node:fs/promises');const os=require('node:os');const path=requ
       await pet.screenshot({path:`test-results/scene-${activity}.png`,omitBackground:true});
       if(activity==='sleeping')assert.equal(await pet.locator('.sleep-z').evaluate(el=>getComputedStyle(el).display)!=='none',true);
     }
-    await pet.locator('#pet').hover();await pet.locator('#open-settings').click();
+    await toggleIncome(app,pet);await pet.locator('#card').waitFor({state:'visible'});await pet.locator('#open-settings').click();await pet.locator('#close-card').click();await pet.locator('#card').waitFor({state:'hidden'});
     const settings=app.windows().find(p=>p.url().endsWith('settings.html'))??await app.waitForEvent('window',p=>p.url().endsWith('settings.html'));await settings.locator('#salary').waitFor();
     // One enabled action makes each screenshot deterministic; random selection is unit tested.
     for(const action of ['heart','wave','clap','nod','shy','stretch']){

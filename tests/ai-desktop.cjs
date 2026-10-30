@@ -4,6 +4,7 @@ const fs=require('node:fs/promises');
 const os=require('node:os');
 const path=require('node:path');
 const http=require('node:http');
+const {toggleIncome}=require('./income-menu.cjs');
 (async()=>{
   const profile=await fs.mkdtemp(path.join(os.tmpdir(),'salary-pet-ai-'));
   const requests=[];let application;let responseCode=200;
@@ -28,9 +29,13 @@ const http=require('node:http');
     await form.locator('#ai-test').click();await form.locator('#ai-notice').filter({hasText:'连接成功'}).waitFor();
     assert.equal((await form.evaluate(()=>window.petAPI.getAI())).config.enabled,false,'test connection must not save draft');
     await form.locator('#ai-persona-mode').selectOption('preset');
+    await form.locator('#ai-proactive').selectOption('occasional');
+    await form.locator('#ai-proactive-minutes').fill('10');
     await form.locator('#ai-memory').check();await form.locator('#ai-save').click();await form.locator('#ai-notice').filter({hasText:'已保存'}).waitFor();
     assert.equal(await form.locator('#ai-key').inputValue(),'','saved key must not remain in input');
-    const state=await form.evaluate(()=>window.petAPI.getAI());assert.equal(state.hasKey,true);assert.equal(state.config.nickname,'搭子');assert.equal(state.config.persona,'worker');
+    const state=await form.evaluate(()=>window.petAPI.getAI());assert.equal(state.hasKey,true);assert.equal(state.config.nickname,'搭子');assert.equal(state.config.persona,'worker');assert.equal(state.config.proactiveIntervalMinutes,10);
+    await form.locator('#ai-proactive-minutes').fill('0');await form.locator('#ai-save').click();await form.locator('#ai-notice').filter({hasText:'间隔'}).waitFor();assert.equal((await form.evaluate(()=>window.petAPI.getAI())).config.proactiveIntervalMinutes,10,'invalid interval must preserve saved settings');
+    await form.locator('#ai-proactive-minutes').fill('20');await form.locator('#ai-save').click();await form.locator('#ai-notice').filter({hasText:'已保存'}).waitFor();
     assert.ok(!JSON.stringify(state).includes('test-key-no-real-account'));
     const disk=await fs.readFile(path.join(profile,'ai-settings.json'),'utf8');assert.ok(!disk.includes('test-key-no-real-account'));
     await form.locator('#salary').fill('12345.67');await form.locator('#save').click();await form.locator('#notice').filter({hasText:'已保存'}).waitFor();
@@ -56,17 +61,18 @@ const http=require('node:http');
     },hour);
     await clock(10);await form.locator('#ai-proactive').selectOption('schedule');await form.locator('#ai-save').click();await form.locator('#ai-notice').filter({hasText:'已保存'}).waitFor();
     const beforeProactive=requests.length;await new Promise(resolve=>setTimeout(resolve,11000));assert.equal(requests.length,beforeProactive,'enabling schedule mode must not cause a startup greeting');
-    await pet.mouse.move(2,2);await pet.locator('#card').waitFor({state:'hidden'});
+    await toggleIncome(application,pet);await pet.locator('#card').waitFor({state:'visible'});await pet.mouse.move(2,2);
     await clock(12);await pet.locator('#speech').waitFor({state:'visible',timeout:15000});
     assert.equal(requests.length,beforeProactive+1);assert.equal(application.windows().filter(p=>p.url().endsWith('chat.html')).length,1);
     await pet.screenshot({path:'test-results/ai-bubble.png',omitBackground:true});
     await pet.locator('#speech').waitFor({state:'hidden',timeout:15000});
+    await pet.locator('#card').waitFor({state:'visible'});
     await form.locator('#ai-proactive').selectOption('off');await form.locator('#ai-save').click();await form.locator('#ai-notice').filter({hasText:'已保存'}).waitFor();
-    await form.locator('#close').click();await pet.locator('#pet').hover();
+    await form.locator('#close').click();await pet.locator('#card').waitFor({state:'visible'});
     const card=await pet.locator('#card').boundingBox();assert.equal(card.width,248);assert.ok(card.height<180);assert.equal(await pet.locator('#earned').evaluate(el=>getComputedStyle(el).fontSize),'28px');await pet.screenshot({path:'test-results/compact-card.png',omitBackground:true});
     await application.close();application=await launch();const restarted=await application.firstWindow();await restarted.waitForLoadState('domcontentloaded');
-    const saved=await restarted.evaluate(()=>window.petAPI.getAI());assert.equal(saved.hasKey,true);assert.equal(saved.config.nickname,'搭子');assert.equal(saved.config.memory,true);assert.equal(saved.config.shareIncome,false);
-    if(process.env.SALARY_PET_EXECUTABLE){const info=await application.evaluate(({app})=>({version:app.getVersion(),packaged:app.isPackaged,path:app.getAppPath()}));assert.equal(info.version,'1.3.0');assert.equal(info.packaged,true);assert.match(info.path,/app\.asar$/);}
+    const saved=await restarted.evaluate(()=>window.petAPI.getAI());assert.equal(saved.hasKey,true);assert.equal(saved.config.nickname,'搭子');assert.equal(saved.config.memory,true);assert.equal(saved.config.shareIncome,false);assert.equal(saved.config.proactiveIntervalMinutes,20);
+    if(process.env.SALARY_PET_EXECUTABLE){const info=await application.evaluate(({app})=>({version:app.getVersion(),packaged:app.isPackaged,path:app.getAppPath()}));assert.equal(info.version,'1.3.1');assert.equal(info.packaged,true);assert.match(info.path,/app\.asar$/);}
     assert.equal(requests.filter(r=>r.url!=='/v1/chat/completions').length,0);
     console.log('PASS: AI settings, unsaved connection test, personas, encrypted key, chat, consent/revocation, friendly errors, clear, proactive transition/bubble/expiry, compact card and restart.');
   }finally{if(application)await application.close();await new Promise(resolve=>server.close(resolve));await fs.rm(profile,{recursive:true,force:true});}

@@ -32,7 +32,7 @@
     <p class="explanation">秒薪 = 税后月薪 ÷ 当月有效工作总秒数。<br>这是按排班均摊的收入估算；修改月薪或排班会重新计算当天金额。</p>
     <div class="error" data-error="general" role="alert"></div><p id="warning" class="warning" hidden></p>
     <div id="notice" role="status" aria-live="polite"></div>
-    <footer class="actions"><span>设置后，移到一二上查看今日收入</span><div><button type="button" id="close" class="secondary">关闭</button><button type="submit" id="save" class="primary">保存设置 <span>↗</span></button></div></footer>
+    <footer class="actions"><span>右键一二，选择“查看”显示今日收入</span><div><button type="button" id="close" class="secondary">关闭</button><button type="submit" id="save" class="primary">保存设置 <span>↗</span></button></div></footer>
   </form>
   <section class="panel ai-panel" id="ai-settings" aria-label="AI 陪伴设置">
     <div class="section-title"><span class="number">05</span><h2>AI 陪伴</h2><span class="tag">和一二聊聊天</span></div>
@@ -47,7 +47,8 @@
     <label for="ai-nickname">一二怎么称呼你</label><input id="ai-nickname" type="text" maxlength="30" placeholder="例如：搭子、小林、老板">
     <div class="ai-grid"><div><label for="ai-persona-mode">人设方式</label><select id="ai-persona-mode"><option value="preset">选择预设性格</option><option value="custom">自定义人设 Prompt</option></select></div><div id="ai-preset-fields"><label for="ai-persona">性格</label><select id="ai-persona"><option value="gentle">温柔陪伴</option><option value="cute">活泼可爱</option><option value="snarky">毒舌</option><option value="worker">打工人嘴替</option></select></div></div>
     <div id="ai-custom-fields" hidden><label for="ai-custom-prompt">自定义人设 Prompt</label><textarea id="ai-custom-prompt" rows="4" maxlength="4000" placeholder="例如：你是一位懂打工人的朋友，讲话简短，喜欢用幽默帮我缓解压力。"></textarea><p class="hint">描述一二的性格、说话方式和你希望它遵守的习惯，最多 4000 字。</p></div>
-    <label for="ai-proactive">主动说话</label><select id="ai-proactive"><option value="off">关闭 · 只在我聊天时回复</option><option value="schedule">作息节点 · 上班、午休、下班时说一句</option><option value="occasional">偶尔一句 · 工作及午休时，每 30 分钟最多一次</option></select>
+    <label for="ai-proactive">主动说话</label><select id="ai-proactive"><option value="off">关闭 · 只在我聊天时回复</option><option value="schedule">作息节点 · 上班、午休、下班时说一句</option><option value="occasional">自定义间隔 · 工作及午休时定时说一句</option></select>
+    <div id="ai-interval-fields" hidden><label for="ai-proactive-minutes">主动聊天间隔（分钟）</label><input id="ai-proactive-minutes" type="number" inputmode="numeric" min="1" max="1440" step="1" value="30" placeholder="例如 10 或 20"><p class="hint">可填 1～1440 的整数，例如每 10 分钟或每 20 分钟。保存后重新计时，首次等待一个完整间隔；重启后记住设置。</p></div>
     <p class="hint">主动消息会显示为短暂气泡，不弹出聊天窗口。每次生成会使用服务商调用额度。</p>
     <label class="ai-check"><input id="ai-memory" type="checkbox"><span><strong>保留聊天记忆</strong><small>仅在本机保存最近 40 条，并发送最近 20 条用于连续对话。关闭后清除旧历史，每次独立聊天。</small></span></label>
     <label class="ai-check"><input id="ai-share-income" type="checkbox"><span><strong>允许 AI 了解收入信息</strong><small>开启后发送当前月薪、秒薪和今日收入等快照。关闭时仅发送作息状态；取消授权会清除旧聊天。</small></span></label>

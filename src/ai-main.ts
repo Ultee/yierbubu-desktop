@@ -59,7 +59,7 @@ export function installAI(host:Host){
   ipcMain.on('chat-open',e=>{if(allowed(e))openChat();});
   const timer=setInterval(()=>{
     const state=service.getState(),context=host.context();
-    const due=policy.tick(state.config.enabled&&state.hasKey?state.config.proactive:'off',context.snapshot.status,Date.now());
+    const due=policy.tick(state.config.enabled&&state.hasKey?state.config.proactive:'off',context.snapshot.status,Date.now(),state.config.proactiveIntervalMinutes);
     if(due&&!busy&&!testBusy)void send('请根据当前作息，主动说一句简短的陪伴或提醒，不超过60字。',true);
   },10000);
   return {openChat,isChat:(e:IpcMainEvent)=>own(e,chat),resetSchedule(){policy.reset();},dispose(){clearInterval(timer);cancel();}};

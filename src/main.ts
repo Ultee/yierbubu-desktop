@@ -17,6 +17,7 @@ let store:Store,data:Stored={config:null,position:null,preferences:normalizePref
 let dragOffset:{x:number;y:number}|null=null,positionTimer:ReturnType<typeof setTimeout>|null=null;
 let {width,height}=petLayout('medium');
 let ai:ReturnType<typeof installAI>|undefined;
+let incomeVisible=false;
 const own=(event:IpcMainEvent|IpcMainInvokeEvent,window:BrowserWindow|null) => !!window&&!window.isDestroyed()&&event.sender===window.webContents&&event.senderFrame===window.webContents.mainFrame;
 function protect(window:BrowserWindow) {
   window.webContents.setWindowOpenHandler(()=>({action:'deny'}));
@@ -49,7 +50,8 @@ function savePreferences(preferences:Preferences):{ok:boolean;error?:string}{
     tray?.setContextMenu(menu());broadcast();return {ok:true};
   }catch{warning='外观保存失败，请检查磁盘空间与文件夹权限。';broadcast();return {ok:false,error:warning};}
 }
-const menu=()=>Menu.buildFromTemplate([{label:'和一二聊聊',click:()=>ai?.openChat()},{label:'设置月薪、作息与AI',click:openSettings},
+function setIncomeVisible(visible:boolean){incomeVisible=visible;tray?.setContextMenu(menu());broadcast();}
+const menu=()=>Menu.buildFromTemplate([{label:'查看',type:'checkbox',checked:incomeVisible,click:()=>setIncomeVisible(!incomeVisible)},{label:'和一二聊聊',click:()=>ai?.openChat()},{label:'设置月薪、作息与AI',click:openSettings},
   {label:'桌宠大小',submenu:SIZES.map(size=>({label:size.label,type:'radio' as const,checked:data.preferences.size===size.id,click:()=>savePreferences({...data.preferences,size:size.id})}))},
   {type:'separator'},{label:'退出秒薪桌宠',click:()=>app.quit()}]);
 function icon(){
@@ -80,14 +82,14 @@ app.whenReady().then(()=>{
   protect(pet);pet.setAlwaysOnTop(true,'floating');pet.setIgnoreMouseEvents(true,{forward:true});pet.loadFile(join(__dirname,'pet.html'));
   pet.once('ready-to-show',()=>pet?.showInactive());
   pet.on('move',()=>{if(positionTimer)clearTimeout(positionTimer);positionTimer=setTimeout(persistPosition,350);});
-  tray=new Tray(icon());tray.setToolTip('秒薪桌宠 · 鼠标移到一二上查看收入');tray.setContextMenu(menu());tray.on('double-click',openSettings);
+  tray=new Tray(icon());tray.setToolTip('秒薪桌宠 · 右键选择“查看”显示收入');tray.setContextMenu(menu());tray.on('double-click',openSettings);
   const reposition=()=>{if(pet){const [x,y]=pet.getPosition();pet.setPosition(...Object.values(clamped(x,y)) as [number,number]);}};
   screen.on('display-removed',reposition);screen.on('display-metrics-changed',reposition);powerMonitor.on('resume',broadcast);
   if(!data.config)openSettings();
 });
 ipcMain.handle('state',(event)=>{
   if(!own(event,pet)&&!own(event,settings))throw new Error('无效请求');
-  return {config:data.config,snapshot:snapshot(data.config,new Date()),preferences:data.preferences,warning};
+  return {config:data.config,snapshot:snapshot(data.config,new Date()),preferences:data.preferences,warning,incomeVisible};
 });
 ipcMain.handle('save',(event,input:unknown,prefs:unknown)=>{
   if(!own(event,settings))return {ok:false,error:'无效请求'};
@@ -102,13 +104,14 @@ ipcMain.handle('size',(event,size:unknown)=>{
 ipcMain.on('settings',event=>{if(own(event,pet)||ai?.isChat(event))openSettings();});
 ipcMain.on('close-settings',event=>{if(own(event,settings))settings?.close();});
 ipcMain.on('menu',event=>{if(own(event,pet)&&pet)menu().popup({window:pet});});
+ipcMain.on('income-hide',event=>{if(own(event,pet))setIncomeVisible(false);});
 ipcMain.on('passthrough',(event,ignore:unknown)=>{if(own(event,pet)&&typeof ignore==='boolean'&&!dragOffset)pet?.setIgnoreMouseEvents(ignore,{forward:true});});
 ipcMain.on('drag',(event,action:unknown,point:unknown)=>{
   if(!own(event,pet)||!pet)return;
   const p=point as {x:number;y:number}|undefined;
   if(action!=='end'&&(!p||!Number.isFinite(p.x)||!Number.isFinite(p.y)||Math.abs(p.x)>1000000||Math.abs(p.y)>1000000))return;
   const cursor=p??screen.getCursorScreenPoint();
-  if(action==='start'){const [x,y]=pet.getPosition();dragOffset={x:cursor.x-x,y:cursor.y-y};pet.setIgnoreMouseEvents(false);}
+  if(action==='start'){setIncomeVisible(false);const [x,y]=pet.getPosition();dragOffset={x:cursor.x-x,y:cursor.y-y};pet.setIgnoreMouseEvents(false);}
   else if(action==='move'&&dragOffset){const p=clamped(cursor.x-dragOffset.x,cursor.y-dragOffset.y);pet.setPosition(p.x,p.y);}
   else if(action==='end'){dragOffset=null;persistPosition();}
 });

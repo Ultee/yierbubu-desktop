@@ -11,6 +11,7 @@ const api:PetBridge={
   sendChat:text=>ipcRenderer.invoke('chat-send',text),
   clearChat:()=>ipcRenderer.invoke('chat-clear'),
   openChat:()=>ipcRenderer.send('chat-open'),
+  hideIncome:()=>ipcRenderer.send('income-hide'),
   onSpeech:listener=>{ipcRenderer.on('speech',(_event,text:unknown)=>{if(typeof text==='string')listener(text);});},
   openSettings:()=>ipcRenderer.send('settings'),
   closeSettings:()=>ipcRenderer.send('close-settings'),

@@ -8,6 +8,7 @@ export interface AIConfig {
   persona: 'gentle' | 'cute' | 'snarky' | 'worker';
   customPrompt: string;
   proactive: 'off' | 'schedule' | 'occasional';
+  proactiveIntervalMinutes: number;
   memory: boolean;
   shareIncome: boolean;
 }
@@ -60,12 +61,15 @@ export function normalizeAIConfig(input: unknown): AIConfig {
   if (/[\u0000-\u001f\u007f]/.test(model)) throw new Error('模型名称不能含控制字符');
   const nickname = text(value.nickname, '', 30, '称呼');
   if (/[\u0000-\u001f\u007f]/.test(nickname)) throw new Error('称呼不能含控制字符');
+  const proactiveIntervalMinutes=value.proactiveIntervalMinutes===undefined?30:value.proactiveIntervalMinutes;
+  if(typeof proactiveIntervalMinutes!=='number'||!Number.isInteger(proactiveIntervalMinutes)||proactiveIntervalMinutes<1||proactiveIntervalMinutes>1440)throw new Error('主动说话间隔须为1到1440之间的整数分钟');
   return {
     enabled: flag(value.enabled), provider, baseUrl: endpoint(value.baseUrl, defaults.baseUrl), model, nickname,
     personaMode: choice(value.personaMode, ['preset', 'custom'], 'preset'),
     persona: choice(value.persona, ['gentle', 'cute', 'snarky', 'worker'], 'gentle'),
     customPrompt: text(value.customPrompt, '', 4000, '自定义人设'),
     proactive: choice(value.proactive, ['off', 'schedule', 'occasional'], 'off'),
+    proactiveIntervalMinutes,
     memory: flag(value.memory), shareIncome: flag(value.shareIncome),
   };
 }

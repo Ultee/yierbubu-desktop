@@ -2,7 +2,7 @@
 <html lang="zh-CN"><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'none'"><title>秒薪桌宠</title><link rel="stylesheet" href="pet.css"></head>
 <body><main id="island">
   <section id="card" aria-label="今日收入" hidden>
-    <header><span class="brand"><span class="dot"></span> 秒薪桌宠</span><div class="tools"><button id="open-chat" title="和一二聊聊" aria-label="和一二聊聊">聊</button><button id="open-settings" title="设置月薪、作息与AI" aria-label="设置">⚙</button></div></header>
+    <header><span class="brand"><span class="dot"></span> 秒薪桌宠</span><div class="tools"><button id="open-chat" title="和一二聊聊" aria-label="和一二聊聊">聊</button><button id="open-settings" title="设置月薪、作息与AI" aria-label="设置">⚙</button><button id="close-card" title="收起收入卡片" aria-label="收起收入卡片">×</button></div></header>
     <div class="eyebrow">今日已赚 <span id="state-label">等待设置</span></div>
     <div class="amount"><span class="currency">¥</span><strong id="earned">0.00</strong></div>
     <div class="rate-line"><span>秒薪</span><span id="rate">—</span></div>
@@ -11,8 +11,7 @@
     <p id="warning" hidden></p>
   </section>
   <button id="speech" hidden aria-label="一二的主动消息，点击打开聊天"></button>
-  <div id="bridge"></div>
-  <div id="pet" role="img" aria-label="一二桌宠，点击互动，悬停查看收入，拖动移动位置，右键打开菜单" tabindex="-1" data-activity="idle" data-action="">
+  <div id="pet" role="img" aria-label="一二桌宠，点击互动，拖动移动位置，右键选择查看显示收入" tabindex="-1" data-activity="idle" data-action="">
     <svg viewBox="0 0 180 145" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
       <ellipse class="shadow" cx="90" cy="134" rx="39" ry="5" fill="#354b3e" opacity=".13"/>
       <g class="sleep-props"><rect x="33" y="114" width="114" height="20" rx="10" fill="#d4dfc5"/><rect x="34" y="106" width="38" height="23" rx="11" fill="#f7e7c5" stroke="#ccb992" stroke-width="1.5"/></g>
