@@ -43,7 +43,9 @@ const path=require('node:path');
     await new Promise(r=>setTimeout(r,500));
     const after=await application.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('pet.html')).getPosition());
     assert.notDeepEqual(after,before,'dragging must move native window');
-    await pet.locator('#pet').hover();await pet.locator('#open-settings').click();
+    // After dragging, explicitly leave then reenter to test a new hover gesture.
+    await pet.mouse.move(2,2);await pet.locator('#card').waitFor({state:'hidden'});
+    await pet.locator('#pet').hover();await pet.locator('#card').waitFor({state:'visible'});await pet.locator('#open-settings').click();
     const settings2=application.windows().find(p=>p.url().endsWith('settings.html'))??await application.waitForEvent('window').catch(()=>null);
     const form2=settings2||application.windows().find(p=>p.url().endsWith('settings.html'));
     await form2.locator('#salary').waitFor();assert.equal(await form2.locator('#salary').inputValue(),'10000.00');

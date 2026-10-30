@@ -2,6 +2,7 @@
 <html lang="zh-CN"><head><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; connect-src 'none'"><meta name="viewport" content="width=device-width,initial-scale=1"><title>秒薪桌宠 · 设置</title><link rel="stylesheet" href="settings.css"></head>
 <body><div class="layout">
   <header class="top"><div class="logo">一二</div><div><div class="overline">SALARY PET</div><h1>让工作的每一秒，看得见。</h1><p>设置好月薪与作息，一二陪你看收入慢慢增长。</p></div><span class="local"><span></span> 仅保存在本机</span></header>
+  <nav class="settings-nav" aria-label="设置分类"><a href="#form">工资与作息</a><a href="#ai-settings">AI 陪伴 ↓</a></nav>
   <main><form id="form" novalidate>
     <section class="panel"><div class="section-title"><span class="number">01</span><h2>你的月薪</h2><span class="tag">到手收入</span></div>
       <label for="salary">税后月薪（实发）</label><div class="salary-input"><span>¥</span><input id="salary" name="salary" type="text" inputmode="decimal" placeholder="例如 8000.00" autocomplete="off" maxlength="12"><span>元 / 月</span></div><div class="error" data-error="salary"></div>
@@ -32,5 +33,27 @@
     <div class="error" data-error="general" role="alert"></div><p id="warning" class="warning" hidden></p>
     <div id="notice" role="status" aria-live="polite"></div>
     <footer class="actions"><span>设置后，移到一二上查看今日收入</span><div><button type="button" id="close" class="secondary">关闭</button><button type="submit" id="save" class="primary">保存设置 <span>↗</span></button></div></footer>
-  </form></main>
+  </form>
+  <section class="panel ai-panel" id="ai-settings" aria-label="AI 陪伴设置">
+    <div class="section-title"><span class="number">05</span><h2>AI 陪伴</h2><span class="tag">和一二聊聊天</span></div>
+    <label class="ai-switch"><span>启用 AI 陪伴</span><input id="ai-enabled" type="checkbox" role="switch"></label>
+    <p class="hint">使用你自己的 API Key，费用由服务商账户承担。关闭后收入计算与原有动作照常使用。</p>
+    <div class="ai-grid"><div><label for="ai-provider">AI 服务商</label><select id="ai-provider"><option value="openai">OpenAI</option><option value="deepseek">DeepSeek</option><option value="qwen">通义千问</option><option value="custom">自定义兼容接口 / 本地模型</option></select></div><div><label for="ai-model">模型名称</label><input id="ai-model" type="text" maxlength="120" placeholder="服务商的模型名称"></div></div>
+    <label for="ai-base-url">接口地址（Base URL）</label><input id="ai-base-url" type="url" placeholder="https://…/v1" autocomplete="off">
+    <div class="ai-label-line"><label for="ai-key">API Key</label><span id="ai-key-status">尚未保存密钥</span></div>
+    <input id="ai-key" type="password" autocomplete="new-password" spellcheck="false" placeholder="粘贴服务商提供的 API Key">
+    <div class="ai-inline"><p class="hint">密钥加密保存在本机，保存后不会回显。接口支持 Chat Completions 协议。</p><button type="button" id="ai-remove-key" class="text-button">移除密钥</button></div>
+    <div class="ai-divider"></div>
+    <label for="ai-nickname">一二怎么称呼你</label><input id="ai-nickname" type="text" maxlength="30" placeholder="例如：搭子、小林、老板">
+    <div class="ai-grid"><div><label for="ai-persona-mode">人设方式</label><select id="ai-persona-mode"><option value="preset">选择预设性格</option><option value="custom">自定义人设 Prompt</option></select></div><div id="ai-preset-fields"><label for="ai-persona">性格</label><select id="ai-persona"><option value="gentle">温柔陪伴</option><option value="cute">活泼可爱</option><option value="snarky">毒舌</option><option value="worker">打工人嘴替</option></select></div></div>
+    <div id="ai-custom-fields" hidden><label for="ai-custom-prompt">自定义人设 Prompt</label><textarea id="ai-custom-prompt" rows="4" maxlength="4000" placeholder="例如：你是一位懂打工人的朋友，讲话简短，喜欢用幽默帮我缓解压力。"></textarea><p class="hint">描述一二的性格、说话方式和你希望它遵守的习惯，最多 4000 字。</p></div>
+    <label for="ai-proactive">主动说话</label><select id="ai-proactive"><option value="off">关闭 · 只在我聊天时回复</option><option value="schedule">作息节点 · 上班、午休、下班时说一句</option><option value="occasional">偶尔一句 · 工作及午休时，每 30 分钟最多一次</option></select>
+    <p class="hint">主动消息会显示为短暂气泡，不弹出聊天窗口。每次生成会使用服务商调用额度。</p>
+    <label class="ai-check"><input id="ai-memory" type="checkbox"><span><strong>保留聊天记忆</strong><small>仅在本机保存最近 40 条，并发送最近 20 条用于连续对话。关闭后清除旧历史，每次独立聊天。</small></span></label>
+    <label class="ai-check"><input id="ai-share-income" type="checkbox"><span><strong>允许 AI 了解收入信息</strong><small>开启后发送当前月薪、秒薪和今日收入等快照。关闭时仅发送作息状态；取消授权会清除旧聊天。</small></span></label>
+    <p class="hint">聊天内容会发送给所选服务商，你主动输入的个人信息也会随消息发送。聊天记录默认不保存到磁盘。</p>
+    <div id="ai-notice" role="status" aria-live="polite"></div>
+    <div class="ai-buttons"><button type="button" id="ai-test" class="secondary">测试连接</button><button type="button" id="ai-save" class="primary">保存 AI 设置</button><button type="button" id="ai-open-chat" class="secondary">和一二聊聊</button><button type="button" id="ai-clear" class="text-button">清空聊天记录</button></div>
+  </section>
+  </main>
 </div><script src="settings.js"></script></body></html>

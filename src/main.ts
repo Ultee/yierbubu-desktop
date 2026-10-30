@@ -6,6 +6,7 @@ import {ConfigError,validateConfig,snapshot} from './core.ts';
 import type {Stored} from './store.ts';
 import {normalizePreferences,petLayout,SIZES} from './pet-behavior.ts';
 import type {PetSize,Preferences} from './pet-behavior.ts';
+import {installAI} from './ai-main.ts';
 
 // Test profiles are isolated; the normal app never uses fixture salary data.
 const profile=process.env.SALARY_PET_PROFILE;
@@ -15,6 +16,7 @@ let pet:BrowserWindow|null=null,settings:BrowserWindow|null=null,tray:Tray|null=
 let store:Store,data:Stored={config:null,position:null,preferences:normalizePreferences(undefined)},warning='';
 let dragOffset:{x:number;y:number}|null=null,positionTimer:ReturnType<typeof setTimeout>|null=null;
 let {width,height}=petLayout('medium');
+let ai:ReturnType<typeof installAI>|undefined;
 const own=(event:IpcMainEvent|IpcMainInvokeEvent,window:BrowserWindow|null) => !!window&&!window.isDestroyed()&&event.sender===window.webContents&&event.senderFrame===window.webContents.mainFrame;
 function protect(window:BrowserWindow) {
   window.webContents.setWindowOpenHandler(()=>({action:'deny'}));
@@ -47,7 +49,7 @@ function savePreferences(preferences:Preferences):{ok:boolean;error?:string}{
     tray?.setContextMenu(menu());broadcast();return {ok:true};
   }catch{warning='外观保存失败，请检查磁盘空间与文件夹权限。';broadcast();return {ok:false,error:warning};}
 }
-const menu=()=>Menu.buildFromTemplate([{label:'设置月薪、作息与互动',click:openSettings},
+const menu=()=>Menu.buildFromTemplate([{label:'和一二聊聊',click:()=>ai?.openChat()},{label:'设置月薪、作息与AI',click:openSettings},
   {label:'桌宠大小',submenu:SIZES.map(size=>({label:size.label,type:'radio' as const,checked:data.preferences.size===size.id,click:()=>savePreferences({...data.preferences,size:size.id})}))},
   {type:'separator'},{label:'退出秒薪桌宠',click:()=>app.quit()}]);
 function icon(){
@@ -70,6 +72,7 @@ else {
 app.on('second-instance',()=>openSettings());
 app.whenReady().then(()=>{
   store=new Store(app.getPath('userData'));const loaded=store.load();data={config:loaded.config,position:loaded.position,preferences:loaded.preferences};warning=loaded.warning;
+  ai=installAI({dir:app.getPath('userData'),pet:()=>pet,settings:()=>settings,context:()=>({config:data.config,snapshot:snapshot(data.config,new Date())}),protect,broadcast});
   ({width,height}=petLayout(data.preferences.size));
   const a=screen.getPrimaryDisplay().workArea;
   const pos=data.position??{x:a.x+a.width-width-28,y:a.y+a.height-height-28};
@@ -88,7 +91,7 @@ ipcMain.handle('state',(event)=>{
 });
 ipcMain.handle('save',(event,input:unknown,prefs:unknown)=>{
   if(!own(event,settings))return {ok:false,error:'无效请求'};
-  try{const config=validateConfig(input),preferences=normalizePreferences(prefs);store.save({...data,config,preferences});data.config=config;data.preferences=preferences;warning='';applySize();tray?.setContextMenu(menu());broadcast();return {ok:true};}
+  try{const config=validateConfig(input),preferences=normalizePreferences(prefs);store.save({...data,config,preferences});data.config=config;data.preferences=preferences;warning='';ai?.resetSchedule();applySize();tray?.setContextMenu(menu());broadcast();return {ok:true};}
   catch(error){return {ok:false,field:error instanceof ConfigError?error.field:'general',error:error instanceof ConfigError?error.message:'保存失败，请检查磁盘空间与文件夹权限。'};}
 });
 ipcMain.handle('size',(event,size:unknown)=>{
@@ -96,7 +99,7 @@ ipcMain.handle('size',(event,size:unknown)=>{
   if(dragOffset)return {ok:false,error:'请先结束拖动'};
   return savePreferences({...data.preferences,size:size as PetSize});
 });
-ipcMain.on('settings',event=>{if(own(event,pet))openSettings();});
+ipcMain.on('settings',event=>{if(own(event,pet)||ai?.isChat(event))openSettings();});
 ipcMain.on('close-settings',event=>{if(own(event,settings))settings?.close();});
 ipcMain.on('menu',event=>{if(own(event,pet)&&pet)menu().popup({window:pet});});
 ipcMain.on('passthrough',(event,ignore:unknown)=>{if(own(event,pet)&&typeof ignore==='boolean'&&!dragOffset)pet?.setIgnoreMouseEvents(ignore,{forward:true});});
@@ -110,5 +113,5 @@ ipcMain.on('drag',(event,action:unknown,point:unknown)=>{
   else if(action==='end'){dragOffset=null;persistPosition();}
 });
 app.on('window-all-closed',()=>{});
-app.on('before-quit',()=>{if(positionTimer)clearTimeout(positionTimer);persistPosition();tray?.destroy();});
+app.on('before-quit',()=>{ai?.dispose();if(positionTimer)clearTimeout(positionTimer);persistPosition();tray?.destroy();});
 }

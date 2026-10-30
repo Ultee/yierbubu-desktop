@@ -3,6 +3,7 @@ import {ConfigError,validateConfig} from './core.ts';
 import type {Config} from './core.ts';
 import {ACTIONS,normalizePreferences} from './pet-behavior.ts';
 import type {Action,PetSize} from './pet-behavior.ts';
+import {initAISettings} from './ai-settings.ts';
 const input=(id:string)=>document.getElementById(id) as HTMLInputElement;
 const value=(id:string)=>input(id).value;
 let overrides:Record<string,boolean>={};
@@ -71,3 +72,4 @@ window.petAPI.onChanged(()=>{
   }).catch(()=>{});
 });
 void load();
+initAISettings();

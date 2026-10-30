@@ -3,6 +3,8 @@ import type {Status} from './core.ts';
 import {normalizePreferences,chooseAction,activityFor,Gesture} from './pet-behavior.ts';
 import type {Action} from './pet-behavior.ts';
 const pet=document.querySelector<HTMLElement>('#pet')!,card=document.querySelector<HTMLElement>('#card')!;
+const speech=document.getElementById('speech')!;
+let speechTimer:ReturnType<typeof setTimeout>|undefined;
 const text=(id:string,value:string)=>{document.getElementById(id)!.textContent=value;};
 let collapse:ReturnType<typeof setTimeout>|undefined,actionTimer:ReturnType<typeof setTimeout>|undefined,actionFrame:number|undefined;
 let dragging=false,lastIgnore:boolean|undefined,gesture:Gesture|null=null,pointerOrigin:{x:number;y:number}|null=null;
@@ -29,7 +31,7 @@ function expand(){clearTimeout(collapse);if(!gesture){card.hidden=false;document
 function shrink(){clearTimeout(collapse);collapse=setTimeout(()=>{card.hidden=true;document.body.classList.remove('expanded');},200);}
 for(const el of [pet,card,document.getElementById('bridge')!]){el.addEventListener('mouseenter',expand);el.addEventListener('mouseleave',shrink);}
 document.addEventListener('mousemove',event=>{
-  const active=!!gesture||!!(event.target as Element).closest('#pet,#card,body.expanded #bridge');
+  const active=!!gesture||!!(event.target as Element).closest('#pet,#card,#speech,body.expanded #bridge');
   if(lastIgnore!==!active){lastIgnore=!active;window.petAPI.passthrough(!active);}
 });
 document.addEventListener('mouseleave',()=>{if(!gesture){window.petAPI.passthrough(true);lastIgnore=true;shrink();}});
@@ -44,7 +46,7 @@ pet.addEventListener('pointerdown',event=>{
 pet.addEventListener('pointermove',event=>{
   if(!gesture)return;
   if(gesture.move(event.screenX,event.screenY)){
-    if(!dragging){dragging=true;pet.classList.add('dragging');card.hidden=true;document.body.classList.remove('expanded');window.petAPI.drag('start',pointerOrigin!);}
+    if(!dragging){dragging=true;pet.classList.add('dragging');card.hidden=true;speech.hidden=true;document.body.classList.remove('expanded');window.petAPI.drag('start',pointerOrigin!);}
     window.petAPI.drag('move',{x:event.screenX,y:event.screenY});
   }
 });
@@ -58,4 +60,7 @@ pet.addEventListener('pointerup',event=>end(event));
 pet.addEventListener('lostpointercapture',event=>end(event,true));pet.addEventListener('pointercancel',event=>end(event,true));
 document.addEventListener('contextmenu',event=>{event.preventDefault();window.petAPI.menu();});
 document.getElementById('open-settings')!.addEventListener('click',()=>window.petAPI.openSettings());
+document.getElementById('open-chat')!.addEventListener('click',()=>window.petAPI.openChat());
+speech.addEventListener('click',()=>{speech.hidden=true;window.petAPI.openChat();});
+window.petAPI.onSpeech(message=>{clearTimeout(speechTimer);speech.textContent=message;speech.hidden=!message||dragging;if(message)speechTimer=setTimeout(()=>{speech.hidden=true;},12000);});
 window.petAPI.onChanged(()=>void refresh());setInterval(()=>void refresh(),1000);void refresh();

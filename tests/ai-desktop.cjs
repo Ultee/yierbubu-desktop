@@ -1,0 +1,73 @@
+const {_electron:electron}=require('playwright-core');
+const assert=require('node:assert/strict');
+const fs=require('node:fs/promises');
+const os=require('node:os');
+const path=require('node:path');
+const http=require('node:http');
+(async()=>{
+  const profile=await fs.mkdtemp(path.join(os.tmpdir(),'salary-pet-ai-'));
+  const requests=[];let application;let responseCode=200;
+  const server=http.createServer(async(req,res)=>{
+    let body='';for await(const chunk of req)body+=chunk;
+    const payload=JSON.parse(body);requests.push({url:req.url,key:req.headers.authorization,payload});
+    res.writeHead(responseCode,{'content-type':'application/json'});
+    res.end(JSON.stringify(responseCode===200?{choices:[{message:{content:payload.messages.at(-1).content==='验证纯文本'?'搭子，<script>这是一段普通文字</script>':'搭子，今天也辛苦啦。先喝口水，我陪你慢慢来。'}}]}:{error:{message:'private-token-should-never-be-shown'}}));
+  });
+  await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
+  const address=`http://127.0.0.1:${server.address().port}/v1`;
+  const env={...process.env,SALARY_PET_PROFILE:profile};delete env.ELECTRON_RUN_AS_NODE;
+  const launch=()=>process.env.SALARY_PET_EXECUTABLE?electron.launch({executablePath:process.env.SALARY_PET_EXECUTABLE,args:[],env}):electron.launch({args:[path.resolve('.')],env});
+  try{
+    application=await launch();
+    const form=application.windows().find(p=>p.url().endsWith('settings.html'))??await application.waitForEvent('window',p=>p.url().endsWith('settings.html'));
+    form.setDefaultTimeout(5000);
+    await form.locator('#ai-enabled').check();await form.locator('#ai-provider').selectOption('custom');
+    await form.locator('#ai-base-url').fill(address);await form.locator('#ai-model').fill('local-fixture');await form.locator('#ai-key').fill('test-key-no-real-account');
+    await form.locator('#ai-nickname').fill('搭子');await form.locator('#ai-persona').selectOption('worker');
+    await form.locator('#ai-persona-mode').selectOption('custom');await form.locator('#ai-custom-prompt').fill('你是一个懂打工人的朋友，回答简短。');
+    await form.locator('#ai-test').click();await form.locator('#ai-notice').filter({hasText:'连接成功'}).waitFor();
+    assert.equal((await form.evaluate(()=>window.petAPI.getAI())).config.enabled,false,'test connection must not save draft');
+    await form.locator('#ai-persona-mode').selectOption('preset');
+    await form.locator('#ai-memory').check();await form.locator('#ai-save').click();await form.locator('#ai-notice').filter({hasText:'已保存'}).waitFor();
+    assert.equal(await form.locator('#ai-key').inputValue(),'','saved key must not remain in input');
+    const state=await form.evaluate(()=>window.petAPI.getAI());assert.equal(state.hasKey,true);assert.equal(state.config.nickname,'搭子');assert.equal(state.config.persona,'worker');
+    assert.ok(!JSON.stringify(state).includes('test-key-no-real-account'));
+    const disk=await fs.readFile(path.join(profile,'ai-settings.json'),'utf8');assert.ok(!disk.includes('test-key-no-real-account'));
+    await form.locator('#salary').fill('12345.67');await form.locator('#save').click();await form.locator('#notice').filter({hasText:'已保存'}).waitFor();
+    await form.locator('#ai-open-chat').click();
+    const chat=application.windows().find(p=>p.url().endsWith('chat.html'))??await application.waitForEvent('window',p=>p.url().endsWith('chat.html'));
+    await chat.locator('#chat-input').fill('今天好累');await chat.locator('#chat-send').click();await chat.locator('.message.assistant').first().waitFor();
+    const content=JSON.stringify(requests.at(-1).payload);assert.ok(content.includes('搭子'));assert.ok(!content.includes('1234567'));assert.equal(requests.at(-1).key,'Bearer test-key-no-real-account');assert.equal(await chat.locator('script:not([src])').count(),0);
+    await form.locator('#ai-share-income').check();await form.locator('#ai-save').click();await form.locator('#ai-notice').filter({hasText:'已保存'}).waitFor();
+    await chat.locator('#chat-input').fill('现在的收入是多少');await chat.locator('#chat-send').click();await chat.locator('.message.assistant').nth(1).waitFor();assert.ok(JSON.stringify(requests.at(-1).payload).includes('1234567'));
+    await form.locator('#ai-share-income').uncheck();await form.locator('#ai-save').click();await form.locator('#ai-notice').filter({hasText:'已保存'}).waitFor();
+    await chat.waitForFunction(()=>document.querySelectorAll('.message').length===0);
+    await chat.locator('#chat-input').fill('验证纯文本');await chat.locator('#chat-send').click();await chat.locator('.message.assistant').first().waitFor();assert.match(await chat.locator('.message.assistant').first().textContent(),/<script>/);assert.equal(await chat.locator('script:not([src])').count(),0);
+    await chat.locator('#chat-clear').click();await chat.waitForFunction(()=>document.querySelectorAll('.message').length===0);
+    responseCode=401;await chat.locator('#chat-input').fill('失败时保留输入');await chat.locator('#chat-send').click();await chat.locator('#chat-error').filter({hasText:'密钥'}).waitFor();assert.equal(await chat.locator('#chat-input').inputValue(),'失败时保留输入');assert.ok(!(await chat.locator('#chat-error').textContent()).includes('private-token'));
+    responseCode=200;await chat.locator('#chat-input').fill('今天工作好多，想休息一下');await chat.locator('#chat-send').click();await chat.locator('.message.assistant').first().waitFor();
+    await fs.mkdir('test-results',{recursive:true});await chat.screenshot({path:'test-results/ai-chat.png'});
+    await form.locator('#ai-settings').screenshot({path:'test-results/ai-settings.png'});
+    await chat.locator('#chat-clear').click();await chat.waitForFunction(()=>document.querySelectorAll('.message').length===0);
+    const pet=application.windows().find(p=>p.url().endsWith('pet.html'));
+    const clock=hour=>application.evaluate((_electron,hour)=>{
+      globalThis.__nativeDate??=Date;globalThis.__aiClock=new globalThis.__nativeDate(2026,9,30,hour,30).getTime();
+      globalThis.Date=class extends globalThis.__nativeDate{constructor(...args){super(...(args.length?args:[globalThis.__aiClock]));}static now(){return globalThis.__nativeDate.now();}};
+    },hour);
+    await clock(10);await form.locator('#ai-proactive').selectOption('schedule');await form.locator('#ai-save').click();await form.locator('#ai-notice').filter({hasText:'已保存'}).waitFor();
+    const beforeProactive=requests.length;await new Promise(resolve=>setTimeout(resolve,11000));assert.equal(requests.length,beforeProactive,'enabling schedule mode must not cause a startup greeting');
+    await pet.mouse.move(2,2);await pet.locator('#card').waitFor({state:'hidden'});
+    await clock(12);await pet.locator('#speech').waitFor({state:'visible',timeout:15000});
+    assert.equal(requests.length,beforeProactive+1);assert.equal(application.windows().filter(p=>p.url().endsWith('chat.html')).length,1);
+    await pet.screenshot({path:'test-results/ai-bubble.png',omitBackground:true});
+    await pet.locator('#speech').waitFor({state:'hidden',timeout:15000});
+    await form.locator('#ai-proactive').selectOption('off');await form.locator('#ai-save').click();await form.locator('#ai-notice').filter({hasText:'已保存'}).waitFor();
+    await form.locator('#close').click();await pet.locator('#pet').hover();
+    const card=await pet.locator('#card').boundingBox();assert.equal(card.width,248);assert.ok(card.height<180);assert.equal(await pet.locator('#earned').evaluate(el=>getComputedStyle(el).fontSize),'28px');await pet.screenshot({path:'test-results/compact-card.png',omitBackground:true});
+    await application.close();application=await launch();const restarted=await application.firstWindow();await restarted.waitForLoadState('domcontentloaded');
+    const saved=await restarted.evaluate(()=>window.petAPI.getAI());assert.equal(saved.hasKey,true);assert.equal(saved.config.nickname,'搭子');assert.equal(saved.config.memory,true);assert.equal(saved.config.shareIncome,false);
+    if(process.env.SALARY_PET_EXECUTABLE){const info=await application.evaluate(({app})=>({version:app.getVersion(),packaged:app.isPackaged,path:app.getAppPath()}));assert.equal(info.version,'1.3.0');assert.equal(info.packaged,true);assert.match(info.path,/app\.asar$/);}
+    assert.equal(requests.filter(r=>r.url!=='/v1/chat/completions').length,0);
+    console.log('PASS: AI settings, unsaved connection test, personas, encrypted key, chat, consent/revocation, friendly errors, clear, proactive transition/bubble/expiry, compact card and restart.');
+  }finally{if(application)await application.close();await new Promise(resolve=>server.close(resolve));await fs.rm(profile,{recursive:true,force:true});}
+})().catch(e=>{console.error(e);process.exitCode=1;});
