@@ -1,7 +1,7 @@
 {
   "name": "salary-pet",
   "productName": "SalaryPet",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "description": "本地运行的秒薪桌宠",
   "author": "Salary Pet",
@@ -13,7 +13,8 @@
     "build": "node scripts/build.mjs",
     "start": "npm run build && electron .",
     "test:desktop": "node tests/desktop.cjs",
-    "package": "npm run build && node scripts/package.mjs"
+    "package": "npm run build && node scripts/package.mjs",
+    "test:features": "node tests/features.cjs"
   },
   "type": "module",
   "devDependencies": {

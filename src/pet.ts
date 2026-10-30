@@ -1,12 +1,20 @@
 import type {} from './bridge.ts';
 import type {Status} from './core.ts';
+import {normalizePreferences,chooseAction,activityFor,Gesture} from './pet-behavior.ts';
+import type {Action} from './pet-behavior.ts';
 const pet=document.querySelector<HTMLElement>('#pet')!,card=document.querySelector<HTMLElement>('#card')!;
 const text=(id:string,value:string)=>{document.getElementById(id)!.textContent=value;};
-let collapse:ReturnType<typeof setTimeout>|undefined,dragging=false,lastIgnore:boolean|undefined;
+let collapse:ReturnType<typeof setTimeout>|undefined,actionTimer:ReturnType<typeof setTimeout>|undefined,actionFrame:number|undefined;
+let dragging=false,lastIgnore:boolean|undefined,gesture:Gesture|null=null,pointerOrigin:{x:number;y:number}|null=null;
+let preferences=normalizePreferences(undefined),previousAction:Action|null=null;
 const labels:Record<Status,string>={unconfigured:'等待设置',empty:'暂无排班',rest:'休息日',before:'未上班',working:'工作中',lunch:'午休中',finished:'已下班'};
+function stopAction(){clearTimeout(actionTimer);if(actionFrame!==undefined){cancelAnimationFrame(actionFrame);actionFrame=undefined;}pet.dataset.action='';}
 async function refresh(){
   try{
     const state=await window.petAPI.getState(),s=state.snapshot;
+    preferences=normalizePreferences(state.preferences);document.body.dataset.size=preferences.size;
+    pet.dataset.enabledActions=preferences.actions.join(',');pet.dataset.activity=activityFor(s.status);
+    if(pet.dataset.action&&!preferences.actions.includes(pet.dataset.action as Action))stopAction();
     text('earned',(s.earnedCents/100).toLocaleString('zh-CN',{minimumFractionDigits:2,maximumFractionDigits:2}));
     text('rate',s.rate===null?'—':s.rate<.0001?' < ¥0.0001/秒':`¥${s.rate.toFixed(4)}/秒`);
     text('state-label',labels[s.status]);
@@ -17,20 +25,37 @@ async function refresh(){
     const warning=document.getElementById('warning')!;warning.hidden=!state.warning;warning.textContent=state.warning;
   }catch{text('status','暂时无法读取设置，请通过右键菜单重试');}
 }
-function expand(){clearTimeout(collapse);if(!dragging){card.hidden=false;document.body.classList.add('expanded');void refresh();}}
+function expand(){clearTimeout(collapse);if(!gesture){card.hidden=false;document.body.classList.add('expanded');void refresh();}}
 function shrink(){clearTimeout(collapse);collapse=setTimeout(()=>{card.hidden=true;document.body.classList.remove('expanded');},200);}
 for(const el of [pet,card,document.getElementById('bridge')!]){el.addEventListener('mouseenter',expand);el.addEventListener('mouseleave',shrink);}
 document.addEventListener('mousemove',event=>{
-  const active=dragging||!!(event.target as Element).closest('#pet,#card,body.expanded #bridge');
+  const active=!!gesture||!!(event.target as Element).closest('#pet,#card,body.expanded #bridge');
   if(lastIgnore!==!active){lastIgnore=!active;window.petAPI.passthrough(!active);}
 });
-document.addEventListener('mouseleave',()=>{if(!dragging){window.petAPI.passthrough(true);lastIgnore=true;shrink();}});
+document.addEventListener('mouseleave',()=>{if(!gesture){window.petAPI.passthrough(true);lastIgnore=true;shrink();}});
+function react(){
+  const action=chooseAction(preferences.actions,previousAction);if(!action)return;
+  stopAction();previousAction=action;
+  actionFrame=requestAnimationFrame(()=>{actionFrame=undefined;pet.dataset.action=action;actionTimer=setTimeout(()=>{pet.dataset.action='';},1800);});
+}
 pet.addEventListener('pointerdown',event=>{
-  if(event.button!==0)return;event.preventDefault();dragging=true;pet.classList.add('dragging');pet.setPointerCapture(event.pointerId);clearTimeout(collapse);card.hidden=true;document.body.classList.remove('expanded');window.petAPI.drag('start',{x:event.screenX,y:event.screenY});
+  if(event.button!==0)return;event.preventDefault();stopAction();gesture=new Gesture(event.screenX,event.screenY);pointerOrigin={x:event.screenX,y:event.screenY};pet.setPointerCapture(event.pointerId);clearTimeout(collapse);window.petAPI.passthrough(false);lastIgnore=false;
 });
-pet.addEventListener('pointermove',event=>{if(dragging)window.petAPI.drag('move',{x:event.screenX,y:event.screenY});});
-function end(){if(!dragging)return;dragging=false;pet.classList.remove('dragging');window.petAPI.drag('end');lastIgnore=undefined;}
-pet.addEventListener('pointerup',end);pet.addEventListener('lostpointercapture',end);pet.addEventListener('pointercancel',end);
+pet.addEventListener('pointermove',event=>{
+  if(!gesture)return;
+  if(gesture.move(event.screenX,event.screenY)){
+    if(!dragging){dragging=true;pet.classList.add('dragging');card.hidden=true;document.body.classList.remove('expanded');window.petAPI.drag('start',pointerOrigin!);}
+    window.petAPI.drag('move',{x:event.screenX,y:event.screenY});
+  }
+});
+function end(event:PointerEvent,cancelled=false){
+  if(!gesture)return;gesture.move(event.screenX,event.screenY);
+  const tap=gesture.finish(cancelled);gesture=null;pointerOrigin=null;
+  if(dragging){dragging=false;pet.classList.remove('dragging');window.petAPI.drag('end');}
+  lastIgnore=undefined;if(tap){react();expand();}else shrink();
+}
+pet.addEventListener('pointerup',event=>end(event));
+pet.addEventListener('lostpointercapture',event=>end(event,true));pet.addEventListener('pointercancel',event=>end(event,true));
 document.addEventListener('contextmenu',event=>{event.preventDefault();window.petAPI.menu();});
 document.getElementById('open-settings')!.addEventListener('click',()=>window.petAPI.openSettings());
 window.petAPI.onChanged(()=>void refresh());setInterval(()=>void refresh(),1000);void refresh();

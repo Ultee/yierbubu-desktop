@@ -1,10 +1,21 @@
 import type {} from './bridge.ts';
 import {ConfigError,validateConfig} from './core.ts';
 import type {Config} from './core.ts';
+import {ACTIONS,normalizePreferences} from './pet-behavior.ts';
+import type {Action,PetSize} from './pet-behavior.ts';
 const input=(id:string)=>document.getElementById(id) as HTMLInputElement;
 const value=(id:string)=>input(id).value;
 let overrides:Record<string,boolean>={};
+let savedSize:PetSize='medium';
 const weekdays=()=>Array.from(document.querySelectorAll<HTMLInputElement>('#weekdays input:checked')).map(x=>Number(x.value));
+const selectedActions=()=>Array.from(document.querySelectorAll<HTMLInputElement>('#action-options input:checked')).map(x=>x.value as Action);
+const toggleLabel=()=>{document.getElementById('toggle-actions')!.textContent=selectedActions().length?'全部关闭':'全部开启';};
+for(const action of ACTIONS){
+  const label=document.createElement('label');label.className='action-option';
+  const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.value=action.id;checkbox.id=`action-${action.id}`;checkbox.checked=true;checkbox.addEventListener('change',toggleLabel);
+  const details=document.createElement('span'),name=document.createElement('strong'),description=document.createElement('small');name.textContent=action.label;description.textContent=action.description;details.append(name,description);label.append(checkbox,details);document.getElementById('action-options')!.append(label);
+}
+document.getElementById('toggle-actions')!.addEventListener('click',()=>{const enabled=!selectedActions().length;document.querySelectorAll<HTMLInputElement>('#action-options input').forEach(x=>x.checked=enabled);toggleLabel();});
 function error(field:string,message:string){const el=document.querySelector<HTMLElement>(`[data-error="${field}"]`)??document.querySelector<HTMLElement>('[data-error="general"]')!;el.textContent=message;el.scrollIntoView({block:'nearest'});}
 function clearErrors(){document.querySelectorAll('[data-error]').forEach(el=>el.textContent='');document.getElementById('notice')!.textContent='';}
 function renderOverrides(){
@@ -27,6 +38,7 @@ async function load(){
   try{
     const state=await window.petAPI.getState(),c=state.config;
     if(c){input('salary').value=(c.salaryCents/100).toFixed(2);input('start').value=c.start;input('end').value=c.end;input('lunch-enabled').checked=!!c.lunch;if(c.lunch){input('lunch-start').value=c.lunch.start;input('lunch-end').value=c.lunch.end;}document.querySelectorAll<HTMLInputElement>('#weekdays input').forEach(x=>x.checked=c.weekdays.includes(Number(x.value)));overrides={...c.overrides};}
+    const preferences=normalizePreferences(state.preferences);savedSize=preferences.size;input('pet-size').value=preferences.size;document.querySelectorAll<HTMLInputElement>('#action-options input').forEach(x=>x.checked=preferences.actions.includes(x.value as Action));toggleLabel();
     const warning=document.getElementById('warning')!;warning.hidden=!state.warning;warning.textContent=state.warning;renderOverrides();summary();
   }catch{error('general','读取设置失败，请关闭窗口后重试。');}
 }
@@ -45,11 +57,17 @@ document.getElementById('form')!.addEventListener('submit',async event=>{
   }catch(e){error(e instanceof ConfigError?e.field:'general',e instanceof Error?e.message:'请检查输入');return;}
   const button=document.getElementById('save') as HTMLButtonElement;button.disabled=true;
   try{
-    const result=await window.petAPI.save(config);
+    const result=await window.petAPI.save(config,{size:value('pet-size') as PetSize,actions:selectedActions()});
     if(!result.ok){error(result.field??'general',result.error??'保存失败');return;}
     input('salary').value=(config.salaryCents/100).toFixed(2);document.getElementById('notice')!.textContent='已保存，一二会按新设置计算收入。';document.getElementById('warning')!.hidden=true;
   }catch{error('general','保存失败，请稍后重试。');}finally{button.disabled=false;}
 });
 for(const id of ['start','end','lunch-enabled','lunch-start','lunch-end'])input(id).addEventListener('change',summary);
 document.getElementById('close')!.addEventListener('click',()=>window.petAPI.closeSettings());
+window.petAPI.onChanged(()=>{
+  void window.petAPI.getState().then(state=>{
+    const size=normalizePreferences(state.preferences).size;
+    if(size!==savedSize){savedSize=size;input('pet-size').value=size;}
+  }).catch(()=>{});
+});
 void load();

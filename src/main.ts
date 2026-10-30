@@ -4,15 +4,17 @@ import {join} from 'node:path';
 import {Store} from './store.ts';
 import {ConfigError,validateConfig,snapshot} from './core.ts';
 import type {Stored} from './store.ts';
+import {normalizePreferences,petLayout,SIZES} from './pet-behavior.ts';
+import type {PetSize,Preferences} from './pet-behavior.ts';
 
 // Test profiles are isolated; the normal app never uses fixture salary data.
 const profile=process.env.SALARY_PET_PROFILE;
 if(profile) app.setPath('userData',profile);
 app.setName('SalaryPet');
 let pet:BrowserWindow|null=null,settings:BrowserWindow|null=null,tray:Tray|null=null;
-let store:Store,data:Stored={config:null,position:null},warning='';
+let store:Store,data:Stored={config:null,position:null,preferences:normalizePreferences(undefined)},warning='';
 let dragOffset:{x:number;y:number}|null=null,positionTimer:ReturnType<typeof setTimeout>|null=null;
-const width=320,height=350;
+let {width,height}=petLayout('medium');
 const own=(event:IpcMainEvent|IpcMainInvokeEvent,window:BrowserWindow|null) => !!window&&!window.isDestroyed()&&event.sender===window.webContents&&event.senderFrame===window.webContents.mainFrame;
 function protect(window:BrowserWindow) {
   window.webContents.setWindowOpenHandler(()=>({action:'deny'}));
@@ -35,7 +37,19 @@ function openSettings(){
   protect(settings);settings.loadFile(join(__dirname,'settings.html'));
   settings.on('closed',()=>{settings=null;});
 }
-const menu=()=>Menu.buildFromTemplate([{label:'设置月薪与作息',click:openSettings},{type:'separator'},{label:'退出秒薪桌宠',click:()=>app.quit()}]);
+function applySize(){
+  const next=petLayout(data.preferences.size),oldHeight=height;height=next.height;width=next.width;
+  if(pet){const [x,y]=pet.getPosition();const pos=clamped(x,y+oldHeight-height);pet.setBounds({...pos,width,height});}
+}
+function savePreferences(preferences:Preferences):{ok:boolean;error?:string}{
+  try{
+    store.save({...data,preferences});data.preferences=preferences;warning='';applySize();
+    tray?.setContextMenu(menu());broadcast();return {ok:true};
+  }catch{warning='外观保存失败，请检查磁盘空间与文件夹权限。';broadcast();return {ok:false,error:warning};}
+}
+const menu=()=>Menu.buildFromTemplate([{label:'设置月薪、作息与互动',click:openSettings},
+  {label:'桌宠大小',submenu:SIZES.map(size=>({label:size.label,type:'radio' as const,checked:data.preferences.size===size.id,click:()=>savePreferences({...data.preferences,size:size.id})}))},
+  {type:'separator'},{label:'退出秒薪桌宠',click:()=>app.quit()}]);
 function icon(){
   const pixels=Buffer.alloc(16*16*4);
   for(let y=0;y<16;y++) for(let x=0;x<16;x++) {
@@ -55,7 +69,8 @@ if(!app.requestSingleInstanceLock()) app.quit();
 else {
 app.on('second-instance',()=>openSettings());
 app.whenReady().then(()=>{
-  store=new Store(app.getPath('userData'));const loaded=store.load();data={config:loaded.config,position:loaded.position};warning=loaded.warning;
+  store=new Store(app.getPath('userData'));const loaded=store.load();data={config:loaded.config,position:loaded.position,preferences:loaded.preferences};warning=loaded.warning;
+  ({width,height}=petLayout(data.preferences.size));
   const a=screen.getPrimaryDisplay().workArea;
   const pos=data.position??{x:a.x+a.width-width-28,y:a.y+a.height-height-28};
   pet=new BrowserWindow({...clamped(pos.x,pos.y),width,height,backgroundColor:'#00000000',transparent:true,frame:false,resizable:false,hasShadow:false,skipTaskbar:true,alwaysOnTop:true,focusable:false,show:false,webPreferences:{preload:join(__dirname,'preload.cjs'),nodeIntegration:false,contextIsolation:true,sandbox:true,backgroundThrottling:false}});
@@ -69,12 +84,17 @@ app.whenReady().then(()=>{
 });
 ipcMain.handle('state',(event)=>{
   if(!own(event,pet)&&!own(event,settings))throw new Error('无效请求');
-  return {config:data.config,snapshot:snapshot(data.config,new Date()),warning};
+  return {config:data.config,snapshot:snapshot(data.config,new Date()),preferences:data.preferences,warning};
 });
-ipcMain.handle('save',(event,input:unknown)=>{
+ipcMain.handle('save',(event,input:unknown,prefs:unknown)=>{
   if(!own(event,settings))return {ok:false,error:'无效请求'};
-  try{const config=validateConfig(input);store.save({...data,config});data.config=config;warning='';broadcast();return {ok:true};}
+  try{const config=validateConfig(input),preferences=normalizePreferences(prefs);store.save({...data,config,preferences});data.config=config;data.preferences=preferences;warning='';applySize();tray?.setContextMenu(menu());broadcast();return {ok:true};}
   catch(error){return {ok:false,field:error instanceof ConfigError?error.field:'general',error:error instanceof ConfigError?error.message:'保存失败，请检查磁盘空间与文件夹权限。'};}
+});
+ipcMain.handle('size',(event,size:unknown)=>{
+  if((!own(event,pet)&&!own(event,settings))||!SIZES.some(s=>s.id===size))return {ok:false,error:'无效的桌宠大小'};
+  if(dragOffset)return {ok:false,error:'请先结束拖动'};
+  return savePreferences({...data.preferences,size:size as PetSize});
 });
 ipcMain.on('settings',event=>{if(own(event,pet))openSettings();});
 ipcMain.on('close-settings',event=>{if(own(event,settings))settings?.close();});

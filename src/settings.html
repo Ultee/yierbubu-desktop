@@ -20,6 +20,14 @@
       <div class="override-controls"><div><label for="override-date">日期</label><input id="override-date" type="date"></div><div><label for="override-type">安排</label><select id="override-type"><option value="rest">休息日</option><option value="work">工作日</option></select></div><button type="button" id="add-override" class="secondary">＋ 添加</button></div>
       <div class="error" data-error="overrides"></div><div id="overrides"></div>
     </section>
+    <section class="panel"><div class="section-title"><span class="number">04</span><h2>一二的互动</h2><span class="tag">点一下，有回应</span></div>
+      <label for="pet-size">桌宠大小</label><select id="pet-size"><option value="small">小号 · 75%</option><option value="medium" selected>中号 · 100%</option><option value="large">大号 · 130%</option></select>
+      <p class="hint">只改变一二和场景大小，收入卡片字号保持不变。右键或托盘菜单也可随时切换。</p>
+      <div class="interaction-heading"><label>点击时随机触发的动作</label><button type="button" class="text-button" id="toggle-actions">全部关闭</button></div>
+      <div class="action-options" id="action-options"></div>
+      <p class="hint">每次点击从启用的动作里随机选择，尽量不连续重复。全关后点击不触发互动，作息动画仍正常显示。拖动不会触发点击动作。</p>
+      <div class="schedule-summary">工作时敲键盘 · 午休时躺下睡觉 · 下班时挥手</div>
+    </section>
     <p class="explanation">秒薪 = 税后月薪 ÷ 当月有效工作总秒数。<br>这是按排班均摊的收入估算；修改月薪或排班会重新计算当天金额。</p>
     <div class="error" data-error="general" role="alert"></div><p id="warning" class="warning" hidden></p>
     <div id="notice" role="status" aria-live="polite"></div>

@@ -1,5 +1,5 @@
 :root {font-family:"Segoe UI","Microsoft YaHei",sans-serif;color:#2c4035;font-synthesis:none}
-* {box-sizing:border-box}body{margin:0;background:transparent;overflow:hidden;user-select:none;width:320px;height:350px}
+* {box-sizing:border-box}body{margin:0;background:transparent;overflow:hidden;user-select:none;width:100vw;height:100vh}
 button{font:inherit}button:focus-visible{outline:2px solid #6a8a73;outline-offset:2px}
 #island{position:relative;width:100%;height:100%}
 #card{position:absolute;left:16px;right:16px;bottom:142px;padding:16px 18px 14px;border-radius:20px;border:1px solid #e4e9df;background:#fcfdf9;box-shadow:0 8px 22px #233b2920;animation:reveal .15s ease-out}
@@ -11,6 +11,33 @@ button{font:inherit}button:focus-visible{outline:2px solid #6a8a73;outline-offse
 .amount{display:flex;align-items:baseline;gap:5px;margin:5px 0 10px;font-variant-numeric:tabular-nums}.currency{font-size:21px;color:#6a8063}strong{font-size:38px;line-height:1.1;letter-spacing:-1.5px;font-weight:600}
 .rate-line{font-size:10px;color:#8a9383}#rate{font-variant-numeric:tabular-nums;font-size:11px;color:#61775c}.divider{height:1px;background:#e9ecdf;margin:12px 0 10px}footer{font-size:11px;color:#7b8972}#countdown{font-variant-numeric:tabular-nums;color:#5c7459}#warning{font-size:10px;color:#af6b4d;margin:8px 0 0}
 #bridge{position:absolute;left:72px;right:72px;bottom:127px;height:22px;display:none}body.expanded #bridge{display:block}
-#pet{position:absolute;bottom:5px;left:70px;width:180px;height:140px;cursor:grab;touch-action:none}#pet.dragging{cursor:grabbing}svg{width:100%;height:100%;overflow:visible}.character{transform-origin:90px 130px;animation:breathe 3.8s ease-in-out infinite}.eyes{transform-origin:90px 70px;animation:blink 5.5s infinite}#pet.dragging .character{animation:none;transform:rotate(-4deg)}
+#pet{position:absolute;bottom:5px;left:50%;transform:translateX(-50%);width:180px;height:140px;cursor:grab;touch-action:none}#pet.dragging{cursor:grabbing}svg{width:100%;height:100%;overflow:visible}.character{transform-origin:90px 130px;animation:breathe 3.8s ease-in-out infinite}.eyes{transform-origin:90px 70px;animation:blink 5.5s infinite}#pet.dragging .character{animation:none;transform:rotate(-4deg)}
 @keyframes breathe{50%{transform:translateY(-2px) scaleY(1.015)}}@keyframes blink{0%,42%,46%,100%{transform:scaleY(1)}44%{transform:scaleY(.1)}}@keyframes reveal{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){.character,.eyes,#card{animation:none}}
+body[data-size=small] #pet{width:135px;height:105px}body[data-size=small] #card{bottom:107px}body[data-size=small] #bridge{bottom:92px}
+body[data-size=large] #pet{width:234px;height:182px}body[data-size=large] #card{bottom:184px}body[data-size=large] #bridge{bottom:169px}
+.work-props,.typing-paws,.sleep-props,.sleep-z,.sleep-eyes,.heart-fx,.clap-fx,.shy-fx,.stretch-fx{display:none}
+.hand-left{transform-origin:66px 99px}.hand-right{transform-origin:115px 99px}.head{transform-origin:90px 94px}.pose{transform-origin:90px 90px}
+#pet[data-activity=typing][data-action=""] .work-props,#pet[data-activity=typing][data-action=""] .typing-paws{display:block}
+#pet[data-activity=typing][data-action=""] .hand{visibility:hidden}.typing-left{animation:typing .32s ease-in-out infinite alternate}.typing-right{animation:typing .32s .16s ease-in-out infinite alternate}
+#pet[data-activity=typing][data-action=""] .character{animation:focus 1.6s ease-in-out infinite}
+#pet[data-activity=sleeping][data-action=""] .sleep-props,#pet[data-activity=sleeping][data-action=""] .sleep-z,#pet[data-activity=sleeping][data-action=""] .sleep-eyes{display:block}
+#pet[data-activity=sleeping][data-action=""] .eyes{display:none}#pet[data-activity=sleeping][data-action=""] .pose{transform:translateY(14px) rotate(-82deg) scale(.86)}
+.sleep-z text{animation:zzz 2.7s ease-out infinite}.sleep-z text:nth-child(2){animation-delay:.6s}.sleep-z text:nth-child(3){animation-delay:1.2s}
+#pet[data-activity=waving][data-action=""] .hand-right{animation:goodbye 4s ease-in-out infinite}
+#pet[data-action=wave] .hand-right{animation:wave .42s ease-in-out infinite}
+#pet[data-action=heart] .hand-left{transform:translate(22px,-15px) rotate(-25deg)}#pet[data-action=heart] .hand-right{transform:translate(-22px,-15px) rotate(25deg)}
+#pet[data-action=heart] .heart-fx{display:block;transform-origin:90px 35px;animation:love 1.7s ease-out both}
+#pet[data-action=clap] .hand-left{animation:clap-left .3s ease-in-out infinite}#pet[data-action=clap] .hand-right{animation:clap-right .3s ease-in-out infinite}#pet[data-action=clap] .clap-fx{display:block;animation:spark .3s ease-in-out infinite}
+#pet[data-action=nod] .head{animation:nod .52s ease-in-out infinite}
+#pet[data-action=shy] .hand-left{transform:translate(0,-26px) rotate(12deg)}#pet[data-action=shy] .hand-right{transform:translate(0,-26px) rotate(-12deg)}#pet[data-action=shy] .shy-fx{display:block;opacity:.3}#pet[data-action=shy] .pose{animation:shy .6s ease-in-out infinite}
+#pet[data-action=stretch] .hand-left{animation:stretch-left 1.8s ease-in-out both}#pet[data-action=stretch] .hand-right{animation:stretch-right 1.8s ease-in-out both}#pet[data-action=stretch] .stretch-fx{display:block;animation:spark .8s ease-in-out infinite}
+#pet.dragging .hand,#pet.dragging .head,#pet.dragging .pose{animation:none!important}#pet.dragging .work-props,#pet.dragging .typing-paws,#pet.dragging .sleep-props,#pet.dragging .sleep-z{display:none!important}#pet.dragging .pose{transform:none!important}#pet.dragging .eyes{display:block!important}#pet.dragging .sleep-eyes{display:none!important}#pet.dragging .hand{visibility:visible!important;transform:none}
+@keyframes typing{from{transform:translateY(0)}to{transform:translateY(-3px)}}@keyframes focus{50%{transform:translateY(1px) rotate(.7deg)}}
+@keyframes zzz{0%{opacity:0;transform:translate(0,5px)}30%{opacity:1}100%{opacity:0;transform:translate(4px,-8px)}}
+@keyframes wave{0%,100%{transform:rotate(-125deg)}50%{transform:rotate(-155deg)}}@keyframes goodbye{0%,8%,16%,24%{transform:rotate(-125deg)}4%,12%,20%{transform:rotate(-155deg)}34%,100%{transform:rotate(0)}}
+@keyframes love{0%{opacity:0;transform:translateY(16px) scale(.5)}25%{opacity:1;transform:translateY(0) scale(1)}70%{opacity:1}100%{opacity:0;transform:translateY(-12px) scale(1.1)}}
+@keyframes clap-left{0%,100%{transform:translate(18px,-6px) rotate(-22deg)}50%{transform:translate(25px,-6px) rotate(-35deg)}}@keyframes clap-right{0%,100%{transform:translate(-18px,-6px) rotate(22deg)}50%{transform:translate(-25px,-6px) rotate(35deg)}}
+@keyframes nod{0%,100%{transform:rotate(0)}50%{transform:translateY(4px) rotate(5deg)}}@keyframes shy{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
+@keyframes stretch-left{0%,100%{transform:rotate(0)}25%,75%{transform:rotate(130deg)}}@keyframes stretch-right{0%,100%{transform:rotate(0)}25%,75%{transform:rotate(-130deg)}}@keyframes spark{50%{opacity:.25}}
+@media(prefers-reduced-motion:reduce){.character,.eyes,.head,.hand,.pose,.typing-paws>*,.sleep-z text,.heart-fx,.clap-fx,.stretch-fx{animation:none!important}.sleep-z text{opacity:1}#pet[data-action=wave] .hand-right{transform:rotate(-135deg)}}

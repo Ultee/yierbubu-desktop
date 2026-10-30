@@ -14,6 +14,16 @@ const path=require('node:path');
     const state=await form.evaluate(()=>window.petAPI.getState());assert.equal(state.config,null);
     const info=await app.evaluate(({app})=>({packaged:app.isPackaged,path:app.getAppPath()}));
     assert.equal(info.packaged,true);assert.match(info.path,/app\.asar$/);
-    console.log('PASS: packaged EXE launches from app.asar with empty salary and functional isolated bridge.');
+    assert.equal(await app.evaluate(({app})=>app.getVersion()),'1.2.0');
+    await form.locator('#salary').fill('10000');await form.locator('#pet-size').selectOption('large');await form.locator('#action-heart').uncheck();await form.locator('#save').click();
+    await form.locator('#notice').filter({hasText:'已保存'}).waitFor();
+    const pet=app.windows().find(p=>p.url().endsWith('pet.html'));
+    await pet.waitForFunction(()=>document.querySelector('#pet').getBoundingClientRect().width===234);
+    await app.close();
+    app=await electron.launch({executablePath:process.env.SALARY_PET_EXECUTABLE||path.resolve('../release/SalaryPet-win32-x64/SalaryPet.exe'),args:[],env});
+    const restored=await app.firstWindow();await restored.waitForLoadState('domcontentloaded');
+    const saved=await restored.evaluate(()=>window.petAPI.getState());
+    assert.equal(saved.config.salaryCents,1000000);assert.equal(saved.preferences.size,'large');assert.equal(saved.preferences.actions.includes('heart'),false);assert.equal(saved.preferences.actions.length,5);
+    console.log('PASS: packaged v1.2.0 EXE launches from app.asar with empty salary, saves preferences and restores salary/size/action toggles on restart.');
   }finally{if(app)await app.close();await fs.rm(profile,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -4,10 +4,21 @@ import { mkdtempSync, readFileSync, writeFileSync, rmSync, mkdirSync } from 'nod
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { Store } from '../src/store.ts';
+import {normalizePreferences} from '../src/pet-behavior.ts';
 const config={version:1 as const,salaryCents:800000,weekdays:[1,2,3,4,5],start:'09:00',end:'18:00',lunch:null,overrides:{}};
 test('real disk roundtrip preserves validated configuration and window position',()=>{
   const dir=mkdtempSync(join(tmpdir(),'salary-pet-'));
-  try{const s=new Store(dir);assert.equal(s.load().config,null);s.save({config,position:{x:-20,y:44}});assert.deepEqual(new Store(dir).load(),{config,position:{x:-20,y:44},warning:''});}finally{rmSync(dir,{recursive:true,force:true});}
+  try{const s=new Store(dir);assert.equal(s.load().config,null);s.save({config,position:{x:-20,y:44}});assert.deepEqual(new Store(dir).load(),{config,position:{x:-20,y:44},preferences:normalizePreferences(undefined),warning:''});}finally{rmSync(dir,{recursive:true,force:true});}
+});
+test('appearance preferences survive restart and legacy files keep salary and schedule',()=>{
+  const dir=mkdtempSync(join(tmpdir(),'salary-pet-'));
+  try{
+    writeFileSync(join(dir,'settings.json'),JSON.stringify({version:1,config,position:{x:10,y:20}}));
+    const s=new Store(dir),legacy=s.load();assert.equal(legacy.config?.salaryCents,800000);assert.equal(legacy.preferences.size,'medium');assert.equal(legacy.preferences.actions.length,6);
+    s.save({...legacy,preferences:{size:'large',actions:['heart','stretch']}});
+    assert.deepEqual(new Store(dir).load().preferences,{size:'large',actions:['heart','stretch']});
+    s.save({...legacy,preferences:{size:'small',actions:[]}});assert.deepEqual(new Store(dir).load().preferences.actions,[]);
+  }finally{rmSync(dir,{recursive:true,force:true});}
 });
 test('corrupt source remains untouched and recovers after explicit save',()=>{
   const dir=mkdtempSync(join(tmpdir(),'salary-pet-'));
