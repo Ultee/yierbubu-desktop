@@ -5,7 +5,12 @@ async function toggleIncome(application,pet){
   await application.evaluate(({Menu})=>{
     if(!globalThis.__salaryOriginalPopup){
       globalThis.__salaryOriginalPopup=Menu.prototype.popup;
-      Menu.prototype.popup=function(...args){globalThis.__salaryPopup=this;return globalThis.__salaryOriginalPopup.apply(this,args);};
+      Menu.prototype.popup=function(...args){
+        globalThis.__salaryPopup=this;
+        const item=this.items.find(item=>item.label==='查看');
+        if(item){const click=item.click;item.click=function(...values){globalThis.__salaryMenuClicks??=[];globalThis.__salaryMenuClicks.push({arguments:values.length,checked:item.checked});return click.apply(this,values);};}
+        return globalThis.__salaryOriginalPopup.apply(this,args);
+      };
     }
     globalThis.__salaryPopup=null;
   });

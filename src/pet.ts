@@ -7,7 +7,7 @@ const speech=document.getElementById('speech')!;
 let speechTimer:ReturnType<typeof setTimeout>|undefined;
 const text=(id:string,value:string)=>{document.getElementById(id)!.textContent=value;};
 let actionTimer:ReturnType<typeof setTimeout>|undefined,actionFrame:number|undefined;
-let dragging=false,lastIgnore:boolean|undefined,gesture:Gesture|null=null,pointerOrigin:{x:number;y:number}|null=null;
+let dragging=false,lastIgnore:boolean|undefined,gesture:Gesture|null=null;
 let preferences=normalizePreferences(undefined),previousAction:Action|null=null;
 const labels:Record<Status,string>={unconfigured:'等待设置',empty:'暂无排班',rest:'休息日',before:'未上班',working:'工作中',lunch:'午休中',finished:'已下班'};
 function stopAction(){clearTimeout(actionTimer);if(actionFrame!==undefined){cancelAnimationFrame(actionFrame);actionFrame=undefined;}pet.dataset.action='';}
@@ -39,19 +39,19 @@ function react(){
   actionFrame=requestAnimationFrame(()=>{actionFrame=undefined;pet.dataset.action=action;actionTimer=setTimeout(()=>{pet.dataset.action='';},1800);});
 }
 pet.addEventListener('pointerdown',event=>{
-  if(event.button!==0)return;event.preventDefault();stopAction();gesture=new Gesture(event.screenX,event.screenY);pointerOrigin={x:event.screenX,y:event.screenY};pet.setPointerCapture(event.pointerId);window.petAPI.passthrough(false);lastIgnore=false;
+  if(event.button!==0)return;event.preventDefault();stopAction();gesture=new Gesture(event.screenX,event.screenY);pet.setPointerCapture(event.pointerId);window.petAPI.drag('start');window.petAPI.passthrough(false);lastIgnore=false;
 });
 pet.addEventListener('pointermove',event=>{
   if(!gesture)return;
   if(gesture.move(event.screenX,event.screenY)){
-    if(!dragging){dragging=true;pet.classList.add('dragging');card.hidden=true;speech.hidden=true;document.body.classList.remove('expanded');window.petAPI.drag('start',pointerOrigin!);}
-    window.petAPI.drag('move',{x:event.screenX,y:event.screenY});
+    if(!dragging){dragging=true;pet.classList.add('dragging');card.hidden=true;speech.hidden=true;document.body.classList.remove('expanded');}
+    window.petAPI.drag('move');
   }
 });
 function end(event:PointerEvent,cancelled=false){
   if(!gesture)return;gesture.move(event.screenX,event.screenY);
-  const tap=gesture.finish(cancelled);gesture=null;pointerOrigin=null;
-  if(dragging){dragging=false;pet.classList.remove('dragging');window.petAPI.drag('end');}
+  const tap=gesture.finish(cancelled);gesture=null;window.petAPI.drag('end');
+  if(dragging){dragging=false;pet.classList.remove('dragging');}
   lastIgnore=undefined;if(tap)react();
 }
 pet.addEventListener('pointerup',event=>end(event));

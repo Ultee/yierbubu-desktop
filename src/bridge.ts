@@ -17,7 +17,7 @@ export interface PetBridge {
   hideIncome():void;
   onSpeech(listener:(text:string)=>void):void;
   openSettings():void; closeSettings():void; menu():void;
-  passthrough(ignore:boolean):void; drag(action:'start'|'move'|'end',point?:{x:number;y:number}):void;
+  passthrough(ignore:boolean):void; drag(action:'start'|'move'|'end'):void;
   onChanged(listener:()=>void):void;
 }
 declare global { interface Window { petAPI:PetBridge } }

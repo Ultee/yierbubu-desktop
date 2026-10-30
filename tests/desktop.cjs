@@ -43,11 +43,15 @@ const {toggleIncome}=require('./income-menu.cjs');
     await toggleIncome(application,pet);await pet.locator('#card').waitFor({state:'visible'});await pet.locator('#close-card').click();await pet.locator('#card').waitFor({state:'hidden'});
     const before=await application.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('pet.html')).getPosition());
     const box=await pet.locator('#pet').boundingBox();
-    await pet.mouse.move(box.x+box.width/2,box.y+box.height/2);await pet.mouse.down();
+    // CDP does not move the OS cursor; substitute only that input dependency.
+    await application.evaluate(({screen})=>{globalThis.__realCursor=screen.getCursorScreenPoint;globalThis.__cursor={x:800,y:600};screen.getCursorScreenPoint=()=>({...globalThis.__cursor});});
+    await pet.mouse.move(box.x+box.width/2,box.y+box.height/2);await pet.mouse.down();await pet.evaluate(()=>window.petAPI.getState());
+    await application.evaluate(()=>{globalThis.__cursor={x:745,y:575};});
     await pet.mouse.move(box.x+box.width/2-55,box.y+box.height/2-25,{steps:8});await pet.mouse.up();
     await new Promise(r=>setTimeout(r,500));
     const after=await application.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('pet.html')).getPosition());
     assert.notDeepEqual(after,before,'dragging must move native window');
+    await application.evaluate(({screen})=>{screen.getCursorScreenPoint=globalThis.__realCursor;});
     // After dragging, explicitly leave then reenter to test a new hover gesture.
     await pet.mouse.move(2,2);await pet.locator('#card').waitFor({state:'hidden'});
     await toggleIncome(application,pet);await pet.locator('#card').waitFor({state:'visible'});await pet.locator('#open-settings').click();

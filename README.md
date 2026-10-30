@@ -1,6 +1,6 @@
 # 秒薪桌宠
 
-当前版本：1.3.2，桌宠为用户确认的“一二”白色角色，使用内置 SVG 绘制，支持自备密钥的 AI 陪伴。
+当前版本：1.3.3，桌宠为用户确认的“一二”白色角色，使用内置 SVG 绘制，支持自备密钥的 AI 陪伴。
 
 一个本地运行的 Windows 桌宠：填写税后月薪和作息后，右键一二选择“查看”可看到当天已赚金额、秒薪和下班倒计时。
 
@@ -42,6 +42,8 @@ npm run build
 npm run test:desktop
 npm run test:features
 npm run test:ai
+npm run test:bubble
+npm run test:drag
 npm run package
 ```
 
@@ -55,4 +57,6 @@ npm run package
 
 根据用户指定的“一二布布”角色和确认的白色“一二”形象绘制，参考图：https://c-ssl.duitang.com/uploads/blog/202112/31/20211231082620_b6122.jpg 。角色显示资源内置，运行时不从网络加载图片。
 
-将 `SALARY_PET_PACKAGE_OUT` 设置为 `../release-yier-v1.3.2` 可将新版打包到独立文件夹；不设置时默认使用 `../release`。`SALARY_PET_EXECUTABLE` 可为 AI 桌面测试与打包测试指定 EXE；测试仅连接本地 HTTP 模拟接口，使用临时配置与假密钥。
+将 `SALARY_PET_PACKAGE_OUT` 设置为 `../release-yier-v1.3.3` 可将新版打包到独立文件夹；不设置时默认使用 `../release`。`SALARY_PET_EXECUTABLE` 可为 AI 桌面测试与打包测试指定 EXE；测试仅连接本地 HTTP 模拟接口，使用临时配置与假密钥。
+
+1.3.3 使用系统鼠标DIP坐标拖动，窗口移动不会再通过页面screen坐标反馈偏移。`npm run test:drag` 验证固定鼠标不漂移、释放/取消/丢失捕获清理与位置持久化；`npm run test:drag-native` 会在Windows桌面注入物理鼠标输入并记录实际原生采样轨迹，仅在可接受鼠标短暂移动时运行。两者可通过 `SALARY_PET_EXECUTABLE` 验证最终打包版，使用隔离配置。完整提示词位于 `src/ai-prompts.ts`，普通聊天与主动规则分开，自定义替换预设，授权门禁仍在服务层。

@@ -17,7 +17,7 @@ const api:PetBridge={
   closeSettings:()=>ipcRenderer.send('close-settings'),
   menu:()=>ipcRenderer.send('menu'),
   passthrough:ignore=>ipcRenderer.send('passthrough',ignore),
-  drag:(action,point)=>ipcRenderer.send('drag',action,point),
+  drag:action=>ipcRenderer.send('drag',action),
   onChanged:listener=>{ipcRenderer.on('changed',()=>listener());}
 };
 contextBridge.exposeInMainWorld('petAPI',api);

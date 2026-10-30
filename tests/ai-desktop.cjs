@@ -20,6 +20,7 @@ const {toggleIncome}=require('./income-menu.cjs');
   const launch=()=>process.env.SALARY_PET_EXECUTABLE?electron.launch({executablePath:process.env.SALARY_PET_EXECUTABLE,args:[],env}):electron.launch({args:[path.resolve('.')],env});
   try{
     application=await launch();
+    await application.evaluate(({ipcMain})=>{globalThis.__aiDragTrace=[];ipcMain.on('drag',(_event,action)=>globalThis.__aiDragTrace.push(action));ipcMain.on('income-hide',()=>globalThis.__aiDragTrace.push('income-hide'));});
     const form=application.windows().find(p=>p.url().endsWith('settings.html'))??await application.waitForEvent('window',p=>p.url().endsWith('settings.html'));
     form.setDefaultTimeout(5000);
     await form.locator('#ai-enabled').check();await form.locator('#ai-provider').selectOption('custom');
@@ -43,6 +44,7 @@ const {toggleIncome}=require('./income-menu.cjs');
     const chat=application.windows().find(p=>p.url().endsWith('chat.html'))??await application.waitForEvent('window',p=>p.url().endsWith('chat.html'));
     await chat.locator('#chat-input').fill('今天好累');await chat.locator('#chat-send').click();await chat.locator('.message.assistant').first().waitFor();
     const content=JSON.stringify(requests.at(-1).payload);assert.ok(content.includes('搭子'));assert.ok(!content.includes('1234567'));assert.equal(requests.at(-1).key,'Bearer test-key-no-real-account');assert.equal(await chat.locator('script:not([src])').count(),0);
+    for(const rule of ['没有收入数据','不声称能看见用户的屏幕','不鼓励报复'])assert.ok(content.includes(rule),`expanded runtime prompt: ${rule}`);
     await form.locator('#ai-share-income').check();await form.locator('#ai-save').click();await form.locator('#ai-notice').filter({hasText:'已保存'}).waitFor();
     await chat.locator('#chat-input').fill('现在的收入是多少');await chat.locator('#chat-send').click();await chat.locator('.message.assistant').nth(1).waitFor();assert.ok(JSON.stringify(requests.at(-1).payload).includes('1234567'));
     await form.locator('#ai-share-income').uncheck();await form.locator('#ai-save').click();await form.locator('#ai-notice').filter({hasText:'已保存'}).waitFor();
@@ -64,6 +66,8 @@ const {toggleIncome}=require('./income-menu.cjs');
     await toggleIncome(application,pet);await pet.locator('#card').waitFor({state:'visible'});await pet.mouse.move(2,2);
     await clock(12);await pet.locator('#speech').waitFor({state:'visible',timeout:15000});
     assert.equal(requests.length,beforeProactive+1);assert.equal(application.windows().filter(p=>p.url().endsWith('chat.html')).length,1);
+    const proactivePrompt=requests.at(-1).payload.messages[0].content;
+    for(const rule of ['20～40字','最多60字','不要求回复'])assert.ok(proactivePrompt.includes(rule),rule);
     await pet.screenshot({path:'test-results/ai-bubble.png',omitBackground:true});
     await pet.locator('#speech').waitFor({state:'hidden',timeout:15000});
     await pet.locator('#card').waitFor({state:'visible'});
@@ -72,8 +76,12 @@ const {toggleIncome}=require('./income-menu.cjs');
     const card=await pet.locator('#card').boundingBox();assert.equal(card.width,248);assert.ok(card.height<180);assert.equal(await pet.locator('#earned').evaluate(el=>getComputedStyle(el).fontSize),'28px');await pet.screenshot({path:'test-results/compact-card.png',omitBackground:true});
     await application.close();application=await launch();const restarted=await application.firstWindow();await restarted.waitForLoadState('domcontentloaded');
     const saved=await restarted.evaluate(()=>window.petAPI.getAI());assert.equal(saved.hasKey,true);assert.equal(saved.config.nickname,'搭子');assert.equal(saved.config.memory,true);assert.equal(saved.config.shareIncome,false);assert.equal(saved.config.proactiveIntervalMinutes,20);
-    if(process.env.SALARY_PET_EXECUTABLE){const info=await application.evaluate(({app})=>({version:app.getVersion(),packaged:app.isPackaged,path:app.getAppPath()}));assert.equal(info.version,'1.3.2');assert.equal(info.packaged,true);assert.match(info.path,/app\.asar$/);}
+    if(process.env.SALARY_PET_EXECUTABLE){const info=await application.evaluate(({app})=>({version:app.getVersion(),packaged:app.isPackaged,path:app.getAppPath()}));assert.equal(info.version,'1.3.3');assert.equal(info.packaged,true);assert.match(info.path,/app\.asar$/);}
     assert.equal(requests.filter(r=>r.url!=='/v1/chat/completions').length,0);
     console.log('PASS: AI settings, unsaved connection test, personas, encrypted key, chat, consent/revocation, friendly errors, clear, proactive transition/bubble/expiry, compact card and restart.');
+  }catch(error){
+    const pet=application?.windows().find(p=>p.url().endsWith('pet.html'));
+    if(pet)console.error('AI desktop failure state:',await pet.evaluate(async()=>({incomeVisible:(await window.petAPI.getState()).incomeVisible,dragging:document.querySelector('#pet').classList.contains('dragging'),cardHidden:document.querySelector('#card').hidden,speechHidden:document.querySelector('#speech').hidden})),await application.evaluate(()=>({ipc:globalThis.__aiDragTrace,menu:globalThis.__salaryMenuClicks})));
+    throw error;
   }finally{if(application)await application.close();await new Promise(resolve=>server.close(resolve));await fs.rm(profile,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});

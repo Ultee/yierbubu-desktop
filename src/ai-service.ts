@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { normalizeAIConfig } from './ai-config.ts';
 import type { AIConfig, AIPublicState, AIResult, ChatMessage } from './ai-config.ts';
 import type { Config, Snapshot } from './core.ts';
+import { BASE_PROMPT, PERSONA_PROMPTS, PROACTIVE_PROMPT } from './ai-prompts.ts';
 export type { AIConfig, AIPublicState, AIResult, ChatMessage } from './ai-config.ts';
 
 interface Cipher { available(): boolean; encrypt(text: string): Buffer; decrypt(buffer: Buffer): string }
@@ -11,12 +12,6 @@ const RESPONSE_LIMIT = 1024 * 1024;
 const OUTPUT_LIMIT = 16000;
 // Forty bounded Unicode messages can exceed a single response's byte limit.
 const HISTORY_FILE_LIMIT = HISTORY_LIMIT * OUTPUT_LIMIT * 6 + 16384;
-const personas: Record<AIConfig['persona'], string> = {
-  gentle: '温柔陪伴：耐心倾听、温暖自然，避免说教。',
-  cute: '活泼可爱：轻快俏皮、真诚友善，适当使用可爱的语气。',
-  snarky: '毒舌：机智吐槽、有分寸的幽默，不羞辱用户，不贬低人格。',
-  worker: '打工人嘴替：理解工作中的疲惫，幽默共情，陪用户放松。',
-};
 
 function readJson(path: string, limit = RESPONSE_LIMIT): unknown {
   if (statSync(path).size > limit) throw new Error('size');
@@ -133,9 +128,10 @@ export class AiService {
     const status = context.snapshot.status;
     const statuses = ['unconfigured', 'empty', 'rest', 'before', 'working', 'lunch', 'finished'];
     if (!statuses.includes(status)) return { ok: false, error: '当前作息状态无效' };
-    let system = '你是一二，一只桌面陪伴宠物。用自然、简短的中文纯文本聊天。只提供陪伴，不声称能操作电脑或执行系统动作。';
-    if (config.nickname) system += `用户希望被称为：${config.nickname}。`;
-    system += config.personaMode === 'custom' ? `用户自定义人设：${config.customPrompt}` : personas[config.persona];
+    let system = BASE_PROMPT;
+    if (config.nickname) system += `\n用户希望被称为：${config.nickname}。`;
+    system += '\n' + (config.personaMode === 'custom' ? `用户自定义人设：${config.customPrompt}` : PERSONA_PROMPTS[config.persona]);
+    if (kind === 'proactive') system += `\n主动气泡规则：${PROACTIVE_PROMPT}`;
     system += `\n当前作息状态：${status}。`;
     if (config.shareIncome) {
       const income: Record<string, number | null> = {};

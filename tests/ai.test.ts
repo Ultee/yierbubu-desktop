@@ -268,3 +268,31 @@ test('maximum-size Chinese history remains readable after restart', async () => 
     assert.equal(restarted.getState().warning, '');
   } finally { await fake.close(); rmSync(dir, { recursive: true, force: true }); }
 });
+
+test('requests carry complete base rules, exactly the selected persona and proactive-only brevity rules', async () => {
+  const dir = temporary(); const payloads: any[] = [];
+  const fake = await server((_req, res, body) => { payloads.push(body); reply(res); });
+  try {
+    const service = new AiService(dir, cipher);
+    service.save(draft(fake.url), 'fake-key');
+    const distinctive = ['不强行积极', '不堆叠叠词', '不攻击用户的能力', '不鼓励报复'];
+    for (const [index, persona] of ['gentle', 'cute', 'snarky', 'worker'].entries()) {
+      service.save({ ...service.getState().config, persona });
+      assert.equal((await service.send('今天有点累', context)).ok, true);
+      const system = payloads.at(-1).messages[0].content;
+      for (const rule of ['1～3句', '没有收入数据', '不声称能看见用户的屏幕', '没有历史时不要声称记得', '不要求用户必须回复']) assert.ok(system.includes(rule), rule);
+      for (const [i, marker] of distinctive.entries()) assert.equal(system.includes(marker), i === index, `preset selection: ${marker}`);
+      assert.equal(system.includes('20～40字'), false, 'ordinary chat does not inherit proactive brevity');
+    }
+    service.save({ ...service.getState().config, nickname: '小雨', personaMode: 'custom', customPrompt: '你是沉稳的航海搭档，称呼我船长。' });
+    await service.send('你好', context);
+    const custom = payloads.at(-1).messages[0].content;
+    assert.ok(custom.includes('小雨')); assert.ok(custom.includes('你是沉稳的航海搭档，称呼我船长。'));
+    for (const marker of distinctive) assert.equal(custom.includes(marker), false, 'custom persona replaces all presets');
+    assert.ok(custom.includes('基础规则仍约束事实、隐私和能力范围'));
+    await service.send('主动陪伴', context, 'proactive');
+    const proactive = payloads.at(-1).messages[0].content;
+    for (const rule of ['20～40字', '最多60字', '只表达一个主题', '不要求回复', '不重复可见历史']) assert.ok(proactive.includes(rule), rule);
+    assert.equal(JSON.stringify(payloads.at(-1)).includes('87654321'), false);
+  } finally { await fake.close(); rmSync(dir, { recursive: true, force: true }); }
+});

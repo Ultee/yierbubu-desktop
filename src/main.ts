@@ -14,7 +14,7 @@ if(profile) app.setPath('userData',profile);
 app.setName('SalaryPet');
 let pet:BrowserWindow|null=null,settings:BrowserWindow|null=null,tray:Tray|null=null;
 let store:Store,data:Stored={config:null,position:null,preferences:normalizePreferences(undefined)},warning='';
-let dragOffset:{x:number;y:number}|null=null,positionTimer:ReturnType<typeof setTimeout>|null=null;
+let dragOffset:{x:number;y:number}|null=null,dragMoved=false,positionTimer:ReturnType<typeof setTimeout>|null=null;
 let {width,height}=petLayout('medium');
 let ai:ReturnType<typeof installAI>|undefined;
 let incomeVisible=false;
@@ -106,14 +106,21 @@ ipcMain.on('close-settings',event=>{if(own(event,settings))settings?.close();});
 ipcMain.on('menu',event=>{if(own(event,pet)&&pet)menu().popup({window:pet});});
 ipcMain.on('income-hide',event=>{if(own(event,pet))setIncomeVisible(false);});
 ipcMain.on('passthrough',(event,ignore:unknown)=>{if(own(event,pet)&&typeof ignore==='boolean'&&!dragOffset)pet?.setIgnoreMouseEvents(ignore,{forward:true});});
-ipcMain.on('drag',(event,action:unknown,point:unknown)=>{
+ipcMain.on('drag',(event,action:unknown)=>{
   if(!own(event,pet)||!pet)return;
-  const p=point as {x:number;y:number}|undefined;
-  if(action!=='end'&&(!p||!Number.isFinite(p.x)||!Number.isFinite(p.y)||Math.abs(p.x)>1000000||Math.abs(p.y)>1000000))return;
-  const cursor=p??screen.getCursorScreenPoint();
-  if(action==='start'){setIncomeVisible(false);const [x,y]=pet.getPosition();dragOffset={x:cursor.x-x,y:cursor.y-y};pet.setIgnoreMouseEvents(false);}
-  else if(action==='move'&&dragOffset){const p=clamped(cursor.x-dragOffset.x,cursor.y-dragOffset.y);pet.setPosition(p.x,p.y);}
-  else if(action==='end'){dragOffset=null;persistPosition();}
+  // Cursor and window positions must share Electron's native DIP coordinate space.
+  // Renderer screen coordinates can shift when a captured window moves on Windows.
+  if(action==='start'){
+    if(dragOffset)return;
+    const cursor=screen.getCursorScreenPoint(),[x,y]=pet.getPosition();
+    dragOffset={x:cursor.x-x,y:cursor.y-y};dragMoved=false;pet.setIgnoreMouseEvents(false);
+  }else if(action==='move'&&dragOffset){
+    if(!dragMoved){dragMoved=true;setIncomeVisible(false);}
+    const cursor=screen.getCursorScreenPoint(),p=clamped(cursor.x-dragOffset.x,cursor.y-dragOffset.y),[x,y]=pet.getPosition();
+    if(p.x!==x||p.y!==y)pet.setPosition(p.x,p.y);
+  }else if(action==='end'){
+    dragOffset=null;if(dragMoved)persistPosition();dragMoved=false;
+  }
 });
 app.on('window-all-closed',()=>{});
 app.on('before-quit',()=>{ai?.dispose();if(positionTimer)clearTimeout(positionTimer);persistPosition();tray?.destroy();});
