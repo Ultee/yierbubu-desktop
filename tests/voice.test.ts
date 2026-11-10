@@ -77,11 +77,11 @@ test('Qwen creates built-ins, uploads a custom voice, applies and deletes with f
     assert.equal(state.library.custom.length,1);assert.equal(state.library.custom[0]?.name,'测试音色');
     const customId=state.library.custom[0]!.id;
     assert.equal(state.library.assignments.yier,customId);assert.equal(state.library.assignments.bubu,customId);
-    const speak=await service.speak('yier','你好');
+    const speak=await service.speak('yier','你好','coquettish');
     assert.equal(speak.ok,true);assert.equal(speak.audio,Buffer.from('qwen-audio').toString('base64'));
     const synth=calls.find(call=>call.url.endsWith('/SpeechSynthesizer'))!;
     assert.equal(synth.body.model,'cosyvoice-v3.5-flash');assert.equal(synth.body.input.text,'你好');
-    assert.equal(synth.body.input.rate,1.25);assert.match(synth.body.input.voice,/^vid-/);assert.equal(synth.headers.Authorization,'Bearer qwen-key');
+    assert.equal(synth.body.input.rate,1.25);assert.match(synth.body.input.instruction,/撒娇/);assert.match(synth.body.input.voice,/^vid-/);assert.equal(synth.headers.Authorization,'Bearer qwen-key');
     const wrong=await service.assignVoice('builtin:yier','bubu');assert.equal(wrong.ok,false);
     const builtinDelete=await service.deleteVoice('builtin:yier');assert.equal(builtinDelete.ok,false);assert.match(builtinDelete.error??'',/不可删除/);
     const synthCount=calls.filter(call=>call.url.endsWith('/SpeechSynthesizer')).length;

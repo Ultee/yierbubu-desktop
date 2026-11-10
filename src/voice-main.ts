@@ -60,9 +60,9 @@ export function installVoice(host: Host) {
     if (!own(event, host.settings())) return {ok: false, error: '无效请求'};
     return service.previewVoice(entryId);
   });
-  ipcMain.handle('voice-speak', (event, who: unknown, text: unknown) => {
+  ipcMain.handle('voice-speak', (event, who: unknown, text: unknown, emotion: unknown) => {
     if (!own(event, host.pet())) return {ok: false, error: '无效请求'};
-    return service.speak(who, text);
+    return service.speak(who, text, emotion);
   });
 
   return {dispose(){service.cancel();}};

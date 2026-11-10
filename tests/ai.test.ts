@@ -306,7 +306,7 @@ test('dialogue kind sends two-pet rules, stores assistant-only history and parse
     const service = new AiService(dir, cipher); service.save(draft(fake.url, { memory: true }), 'fake-key');
     assert.equal((await service.send('来一小段你和布布的日常对话吧。', context, 'dialogue')).ok, true);
     const system = payloads[0].messages[0].content;
-    for (const rule of ['双人对话规则', '一二：', '布布：', '8～25字', '布布是一只憨憨的棕色小熊']) assert.ok(system.includes(rule), rule);
+    for (const rule of ['双人对话规则', '一二：', '布布：', '8～25字', '[撒娇]', '[吐槽]', '[兴奋]', '布布是一只憨憨的棕色小熊']) assert.ok(system.includes(rule), rule);
     assert.equal(system.includes('主动气泡规则'), false);
     assert.equal(payloads[0].messages.at(-1).content, '来一小段你和布布的日常对话吧。');
     assert.equal(service.getHistory().length, 1);
@@ -318,6 +318,11 @@ test('dialogue kind sends two-pet rules, stores assistant-only history and parse
     assert.equal(parseDialogue('一二：1\n布布：2\n一二：3\n布布：4\n一二：5')?.length, 5);
     assert.equal(parseDialogue('一二：1\n布布：2\n一二：3\n布布：4\n一二：5\n布布：6\n一二：7')?.length, 6, 'at most six lines');
     assert.deepEqual(parseDialogue('布布：先说的也可以是布布\n一二：好'), [{ who: 'bubu', text: '先说的也可以是布布' }, { who: 'yier', text: '好' }]);
+    assert.deepEqual(parseDialogue('一二：[撒娇]今天陪我一下。\n布布：[吐槽]你不是刚下班吗。\n一二：[兴奋]那我们去吃好吃的！'), [
+      { who: 'yier', text: '今天陪我一下。', emotion: 'coquettish' },
+      { who: 'bubu', text: '你不是刚下班吗。', emotion: 'complaint' },
+      { who: 'yier', text: '那我们去吃好吃的！', emotion: 'excited' },
+    ], 'three emotion tags are stripped from the displayed text');
     service.save(draft(fake.url, { memory: true, buddyPrompt: '布布是一只爱睡觉的小熊。' }));
     await service.send('来一小段你和布布的日常对话吧。', context, 'dialogue');
     const custom = payloads.at(-1).messages[0].content;

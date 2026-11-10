@@ -38,7 +38,7 @@ export interface PetBridge {
   assignVoice(entryId:string,target:VoiceTarget):Promise<VoiceResult>;
   deleteVoice(entryId:string):Promise<VoiceResult>;
   previewVoice(entryId:string):Promise<VoiceResult>;
-  speakLine(who:VoiceSpeaker,text:string):Promise<VoiceResult>;
+  speakLine(who:VoiceSpeaker,text:string,emotion?:DialogueLine['emotion']):Promise<VoiceResult>;
   openSettings():void; closeSettings():void; menu():void;
   passthrough(ignore:boolean):void; drag(action:'start'|'move'|'end'):void;
   onChanged(listener:()=>void):void;

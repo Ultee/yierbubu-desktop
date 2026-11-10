@@ -1,5 +1,6 @@
 import type {} from './bridge.ts';
 import type {Status} from './core.ts';
+import type {DialogueLine} from './ai-dialogue.ts';
 import {normalizePreferences,chooseAction,activityFor,Gesture} from './pet-behavior.ts';
 import type {Action} from './pet-behavior.ts';
 import {OUTFIT_CATALOG} from './outfits.ts';
@@ -182,18 +183,18 @@ function waitForVoice(index:number,generation:number,timeout:number):Promise<str
   });
 }
 function sleep(ms:number){return new Promise(resolve=>setTimeout(resolve,ms));}
-async function prefetchVoice(lines:{who:'yier'|'bubu';text:string}[],generation:number){
+async function prefetchVoice(lines:DialogueLine[],generation:number){
   for(let index=0;index<lines.length;index++){
     if(generation!==voiceGeneration)return;
     const line=lines[index]!;
     if(!line.text.trim()){voiceFailures.add(index);notifyVoice(index,null);continue;}
-    let result:{ok:boolean;audio?:string;error?:string}=await window.petAPI.speakLine(line.who,line.text).catch(()=>({ok:false}));
+    let result:{ok:boolean;audio?:string;error?:string}=await window.petAPI.speakLine(line.who,line.text,line.emotion).catch(()=>({ok:false}));
     if(generation!==voiceGeneration)return;
     if(!result.ok||!result.audio){
       if(!/未启用|API Key|业务空间|Qwen 音色/.test(result.error??'')){
         await sleep(700);
         if(generation!==voiceGeneration)return;
-        result=await window.petAPI.speakLine(line.who,line.text).catch(()=>({ok:false}));
+        result=await window.petAPI.speakLine(line.who,line.text,line.emotion).catch(()=>({ok:false}));
         if(generation!==voiceGeneration)return;
       }
     }
@@ -212,7 +213,7 @@ function stopDialogue(){
   stopVoice();
   voiceAudios.clear();voiceFailures.clear();
 }
-async function runDialogue(lines:{who:'yier'|'bubu';text:string}[],generation:number){
+async function runDialogue(lines:DialogueLine[],generation:number){
   for(let index=0;index<lines.length;index++){
     if(generation!==voiceGeneration||dragging)return;
     const line=lines[index]!;
@@ -236,7 +237,7 @@ async function runDialogue(lines:{who:'yier'|'bubu';text:string}[],generation:nu
     }
   }
 }
-function playDialogue(lines:{who:'yier'|'bubu';text:string}[]){
+function playDialogue(lines:DialogueLine[]){
   stopDialogue();
   if(dragging||!Array.isArray(lines)||lines.length<2)return;
   const generation=voiceGeneration;

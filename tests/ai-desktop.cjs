@@ -90,7 +90,7 @@ const {toggleIncome}=require('./income-menu.cjs');
     const card=await pet.locator('#card').boundingBox();assert.equal(card.width,248);assert.ok(card.height<180);assert.equal(await pet.locator('#earned').evaluate(el=>getComputedStyle(el).fontSize),'28px');await pet.screenshot({path:'test-results/compact-card.png',omitBackground:true});
     await application.close();application=await launch();const restarted=await application.firstWindow();await restarted.waitForLoadState('domcontentloaded');
     const saved=await restarted.evaluate(()=>window.petAPI.getAI());assert.equal(saved.hasKey,true);assert.equal(saved.config.nickname,'搭子');assert.equal(saved.config.memory,true);assert.equal(saved.config.shareIncome,false);assert.equal(saved.config.proactiveIntervalMinutes,20);
-    if(process.env.SALARY_PET_EXECUTABLE){const info=await application.evaluate(({app})=>({version:app.getVersion(),packaged:app.isPackaged,path:app.getAppPath()}));assert.equal(info.version,'1.12.1');assert.equal(info.packaged,true);assert.match(info.path,/app\.asar$/);}
+    if(process.env.SALARY_PET_EXECUTABLE){const info=await application.evaluate(({app})=>({version:app.getVersion(),packaged:app.isPackaged,path:app.getAppPath()}));assert.equal(info.version,'1.13.0');assert.equal(info.packaged,true);assert.match(info.path,/app\.asar$/);}
     assert.equal(requests.filter(r=>r.url!=='/v1/chat/completions').length,0);
     console.log('PASS: AI settings, unsaved connection test, personas, encrypted key, chat, consent/revocation, friendly errors, clear, proactive transition/bubble/expiry, compact card and restart.');
   }catch(error){

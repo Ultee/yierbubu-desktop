@@ -154,20 +154,20 @@ export class QwenAdapter {
     }
   }
 
-  async synthesize(who: VoiceSpeaker, text: string, key: string, workspace: string, model: string, voiceId: string, speed: number): Promise<VoiceResult> {
+  async synthesize(who: VoiceSpeaker, text: string, key: string, workspace: string, model: string, voiceId: string, speed: number, instruction = ''): Promise<VoiceResult> {
     if (!key) return {ok: false, error: '请先填写 Qwen API Key'};
     if (!workspace) return {ok: false, error: '请填写 Qwen 业务空间 ID'};
     if (!voiceId) return {ok: false, error: '请先在语音设置中创建 Qwen 音色'};
     const rate = Number.isFinite(speed) && speed >= 0.5 && speed <= 2 ? speed : 1;
+    const style = typeof instruction === 'string' ? instruction.trim().slice(0, 100) : '';
     const controller = new AbortController();
     this.active.add(controller);
     let timedOut = false;
     const timer = setTimeout(() => { timedOut = true; controller.abort(); }, SYNTH_TIMEOUT);
     try {
-      const result = await this.post(speechUrl(workspace), key, {
-        model,
-        input: {text, voice: voiceId, format: 'mp3', sample_rate: 24000, rate},
-      }, controller.signal);
+      const input: Record<string, unknown> = {text, voice: voiceId, format: 'mp3', sample_rate: 24000, rate};
+      if (style) input.instruction = style;
+      const result = await this.post(speechUrl(workspace), key, {model, input}, controller.signal);
       const data = result?.output?.audio?.data;
       if (typeof data === 'string' && data) return {ok: true, audio: cleanBase64(data)};
       const url = result?.output?.audio?.url;

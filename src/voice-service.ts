@@ -5,6 +5,7 @@ import {isVoiceSpeaker,normalizeVoiceConfig,QWEN_MODEL} from './voice-config.ts'
 import type {VoiceConfig,VoiceCreateResult,VoiceProvider,VoicePublicState,VoiceResult,VoiceSpeaker} from './voice-config.ts';
 import {MimoAdapter} from './voice-mimo.ts';
 import {QwenAdapter} from './voice-qwen.ts';
+import {instructionFor} from './voice-emotions.ts';
 
 interface Cipher { available(): boolean; encrypt(text: string): Buffer; decrypt(buffer: Buffer): string }
 interface StoredLibraryEntry {id: string; name: string; voiceId: string; model: string; workspace: string; createdAt: string}
@@ -260,7 +261,7 @@ export class VoiceService {
     return this.synthesizeMimo(who, text);
   }
 
-  async speak(who: unknown, text: unknown): Promise<VoiceResult> {
+  async speak(who: unknown, text: unknown, emotion?: unknown): Promise<VoiceResult> {
     if (!isVoiceSpeaker(who)) return {ok: false, error: '角色无效'};
     if (!this.config.enabled) return {ok: false, error: '语音未启用'};
     const value = typeof text === 'string' ? text.trim() : '';
@@ -270,7 +271,7 @@ export class VoiceService {
       if (!this.config.qwenWorkspace) return {ok: false, error: '请先在设置中填写 Qwen 业务空间 ID'};
       const voiceId = this.resolveQwenVoice(who);
       if (!voiceId) return {ok: false, error: this.assignments[who] === BUILTIN_IDS[who] ? '请先创建 Qwen 内置音色' : '当前分配的音色不可用，请在音色库中重新选择'};
-      return this.synthesizeQwen(who, value, voiceId);
+      return this.synthesizeQwen(who, value, voiceId, instructionFor(emotion));
     }
     if (!this.keys.mimo) return {ok: false, error: '请先在设置中填写 MiMo API Key'};
     return this.synthesizeMimo(who, value);
@@ -395,8 +396,8 @@ export class VoiceService {
     } satisfies StoredV3);
   }
 
-  private cacheKey(who: VoiceSpeaker, text: string, voiceId: string): string {
-    return createHash('sha256').update(`${this.config.provider}\0${this.config.qwenModel}\0${voiceId}\0${this.config.speed}\0${who}\0${text}`).digest('hex');
+  private cacheKey(who: VoiceSpeaker, text: string, voiceId: string, instruction = ''): string {
+    return createHash('sha256').update(`${this.config.provider}\0${this.config.qwenModel}\0${voiceId}\0${this.config.speed}\0${instruction}\0${who}\0${text}`).digest('hex');
   }
 
   private remember(key: string, audio: string): void {
@@ -407,11 +408,11 @@ export class VoiceService {
     }
   }
 
-  private async synthesizeQwen(who: VoiceSpeaker, text: string, voiceId: string): Promise<VoiceResult> {
-    const key = this.cacheKey(who, text, voiceId);
+  private async synthesizeQwen(who: VoiceSpeaker, text: string, voiceId: string, instruction = ''): Promise<VoiceResult> {
+    const key = this.cacheKey(who, text, voiceId, instruction);
     const cached = this.audioCache.get(key);
     if (cached) return {ok: true, audio: cached};
-    const result = await this.qwen.synthesize(who, text, this.keys.qwen, this.config.qwenWorkspace, this.config.qwenModel, voiceId, this.config.speed);
+    const result = await this.qwen.synthesize(who, text, this.keys.qwen, this.config.qwenWorkspace, this.config.qwenModel, voiceId, this.config.speed, instruction);
     if (result.ok && result.audio) this.remember(key, result.audio);
     return result;
   }
