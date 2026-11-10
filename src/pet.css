@@ -15,7 +15,7 @@ button{font:inherit}button:focus-visible{outline:2px solid #6a8a73;outline-offse
 @media(prefers-reduced-motion:reduce){.character,.eyes,#card{animation:none}}
 body[data-size=small] #pet{width:135px;height:105px}body[data-size=small] #card{bottom:107px}
 body[data-size=large] #pet{width:234px;height:182px}body[data-size=large] #card{bottom:184px}
-.work-props,.typing-paws,.sleep-props,.sleep-z,.sleep-eyes,.heart-fx,.clap-fx,.shy-fx,.stretch-fx{display:none}
+.work-props,.typing-paws,.sleep-props,.sleep-z,.sleep-eyes,.heart-fx,.clap-fx,.shy-fx,.stretch-fx,.happy-eyes,.pat-hand,.buddy-happy,.buddy-sleep,.buddy-z,.buddy-heart,.wear,.star-eyes,.egg-sneeze{display:none}
 .hand-left{transform-origin:66px 99px}.hand-right{transform-origin:115px 99px}.head{transform-origin:90px 94px}.pose{transform-origin:90px 90px}
 #pet[data-activity=typing][data-action=""] .work-props,#pet[data-activity=typing][data-action=""] .typing-paws{display:block}
 #pet[data-activity=typing][data-action=""] .hand{visibility:hidden}.typing-left{animation:typing .32s ease-in-out infinite alternate}.typing-right{animation:typing .32s .16s ease-in-out infinite alternate}
@@ -31,7 +31,43 @@ body[data-size=large] #pet{width:234px;height:182px}body[data-size=large] #card{
 #pet[data-action=nod] .head{animation:nod .52s ease-in-out infinite}
 #pet[data-action=shy] .hand-left{transform:translate(0,-26px) rotate(12deg)}#pet[data-action=shy] .hand-right{transform:translate(0,-26px) rotate(-12deg)}#pet[data-action=shy] .shy-fx{display:block;opacity:.3}#pet[data-action=shy] .pose{animation:shy .6s ease-in-out infinite}
 #pet[data-action=stretch] .hand-left{animation:stretch-left 1.8s ease-in-out both}#pet[data-action=stretch] .hand-right{animation:stretch-right 1.8s ease-in-out both}#pet[data-action=stretch] .stretch-fx{display:block;animation:spark .8s ease-in-out infinite}
-#pet.dragging .hand,#pet.dragging .head,#pet.dragging .pose{animation:none!important}#pet.dragging .work-props,#pet.dragging .typing-paws,#pet.dragging .sleep-props,#pet.dragging .sleep-z{display:none!important}#pet.dragging .pose{transform:none!important}#pet.dragging .eyes{display:block!important}#pet.dragging .sleep-eyes{display:none!important}#pet.dragging .hand{visibility:visible!important;transform:none}
+.pat-hand{transform-origin:90px 8px}
+#pet[data-pat][data-action=""] .pat-hand{display:block;animation:pat .85s ease-in-out infinite}
+#pet[data-pat][data-action=""] .happy-eyes{display:block}
+#pet[data-pat][data-action=""] .eyes{display:none}
+#pet[data-pat][data-action=""] .head{animation:pat-squash .85s ease-in-out infinite}
+#pet[data-pat][data-activity=sleeping] .pat-hand,#pet[data-pat][data-activity=sleeping] .happy-eyes{display:none}
+#buddy{position:absolute;left:calc(50% - 118px);bottom:4px;width:70px;height:63px;cursor:pointer}
+body[data-size=small] #buddy{left:calc(50% - 92px);bottom:3px;width:53px;height:48px}
+body[data-size=large] #buddy{left:calc(50% - 148px);bottom:5px;width:88px;height:80px}
+#pet[data-activity=typing] ~ #buddy{left:calc(50% - 146px)}
+body[data-size=small] #pet[data-activity=typing] ~ #buddy{left:calc(50% - 112px)}
+body[data-size=large] #pet[data-activity=typing] ~ #buddy{left:calc(50% - 148px)}
+#buddy .buddy-body{transform-origin:90.5px 137px;animation:buddy-breathe 4.4s ease-in-out infinite}
+#buddy .buddy-eyes{transform-origin:90px 70px;animation:buddy-blink 6.9s infinite}
+body:has(#pet[data-pat][data-action=""]:not([data-activity=sleeping])) #buddy .buddy-happy{display:block}
+body:has(#pet[data-pat][data-action=""]:not([data-activity=sleeping])) #buddy .buddy-eyes{display:none}
+body:has(#pet[data-pat][data-action=""]:not([data-activity=sleeping])) #buddy .buddy-body{animation:buddy-nuzzle .9s ease-in-out infinite}
+#pet[data-action=heart] ~ #buddy .buddy-happy,#pet[data-action=shy] ~ #buddy .buddy-happy{display:block}
+#pet[data-action=heart] ~ #buddy .buddy-eyes,#pet[data-action=shy] ~ #buddy .buddy-eyes{display:none}
+#pet[data-action=heart] ~ #buddy .buddy-heart{display:block;transform-origin:32px 7px;animation:buddy-love 1.5s ease-out both}
+#pet[data-action=wave] ~ #buddy .buddy-paw-right{transform-origin:115px 99px;animation:buddy-wave .42s ease-in-out infinite}
+#buddy[data-link=hello] .buddy-happy,#buddy[data-link=hop] .buddy-happy,#buddy[data-link=poke] .buddy-happy{display:block}
+#buddy[data-link=hello] .buddy-eyes,#buddy[data-link=hop] .buddy-eyes,#buddy[data-link=poke] .buddy-eyes{display:none}
+#buddy[data-link=hello] .buddy-paw-right{transform-origin:115px 99px;animation:buddy-wave .42s ease-in-out infinite}
+#buddy[data-link=hop] .buddy-body,#buddy[data-link=poke] .buddy-body{animation:buddy-hop .5s ease-in-out 2}
+#pet[data-link=nod] .head{animation:nod .5s ease-in-out 2}
+#pet[data-link=look] .head{animation:buddy-look .9s ease-in-out both}
+#pet[data-activity=sleeping] ~ #buddy .buddy-happy{display:none}
+#pet[data-activity=sleeping] ~ #buddy .buddy-eyes{display:none}
+#pet[data-activity=sleeping] ~ #buddy .buddy-sleep{display:block}
+#pet[data-activity=sleeping] ~ #buddy .buddy-z{display:block}
+#pet[data-activity=sleeping] ~ #buddy .buddy-body{animation:buddy-nap 3.6s ease-in-out infinite}
+#pet[data-activity=sleeping] ~ #buddy[data-link=poke] .buddy-body{animation:buddy-hop .5s ease-in-out 2}
+#pet[data-activity=sleeping] ~ #buddy[data-link=poke] .buddy-happy{display:block}
+#pet[data-activity=sleeping] ~ #buddy[data-link=poke] .buddy-eyes,#pet[data-activity=sleeping] ~ #buddy[data-link=poke] .buddy-sleep{display:none}
+#pet.dragging ~ #buddy .buddy-body,#pet.dragging ~ #buddy .buddy-eyes{animation:none}
+#pet.dragging .hand,#pet.dragging .head,#pet.dragging .pose{animation:none!important}#pet.dragging .work-props,#pet.dragging .typing-paws,#pet.dragging .sleep-props,#pet.dragging .sleep-z,#pet.dragging .pat-hand,#pet.dragging .happy-eyes{display:none!important}#pet.dragging .pose{transform:none!important}#pet.dragging .eyes{display:block!important}#pet.dragging .sleep-eyes{display:none!important}#pet.dragging .hand{visibility:visible!important;transform:none}
 @keyframes typing{from{transform:translateY(0)}to{transform:translateY(-3px)}}@keyframes focus{50%{transform:translateY(1px) rotate(.7deg)}}
 @keyframes zzz{0%{opacity:0;transform:translate(0,5px)}30%{opacity:1}100%{opacity:0;transform:translate(4px,-8px)}}
 @keyframes wave{0%,100%{transform:rotate(-125deg)}50%{transform:rotate(-155deg)}}@keyframes goodbye{0%,8%,16%,24%{transform:rotate(-125deg)}4%,12%,20%{transform:rotate(-155deg)}34%,100%{transform:rotate(0)}}
@@ -39,6 +75,61 @@ body[data-size=large] #pet{width:234px;height:182px}body[data-size=large] #card{
 @keyframes clap-left{0%,100%{transform:translate(18px,-6px) rotate(-22deg)}50%{transform:translate(25px,-6px) rotate(-35deg)}}@keyframes clap-right{0%,100%{transform:translate(-18px,-6px) rotate(22deg)}50%{transform:translate(-25px,-6px) rotate(35deg)}}
 @keyframes nod{0%,100%{transform:rotate(0)}50%{transform:translateY(4px) rotate(5deg)}}@keyframes shy{0%,100%{transform:rotate(-3deg)}50%{transform:rotate(3deg)}}
 @keyframes stretch-left{0%,100%{transform:rotate(0)}25%,75%{transform:rotate(130deg)}}@keyframes stretch-right{0%,100%{transform:rotate(0)}25%,75%{transform:rotate(-130deg)}}@keyframes spark{50%{opacity:.25}}
-@media(prefers-reduced-motion:reduce){.character,.eyes,.head,.hand,.pose,.typing-paws>*,.sleep-z text,.heart-fx,.clap-fx,.stretch-fx{animation:none!important}.sleep-z text{opacity:1}#pet[data-action=wave] .hand-right{transform:rotate(-135deg)}}
+@keyframes pat{0%,100%{transform:translateY(-4px) rotate(-6deg)}50%{transform:translateY(3px) rotate(5deg)}}@keyframes pat-squash{0%,100%{transform:none}50%{transform:translateY(3px) scaleY(.94) scaleX(1.03)}}
+@keyframes buddy-breathe{50%{transform:translateY(-1px) scaleY(1.02)}}@keyframes buddy-blink{0%,43%,47%,100%{transform:scaleY(1)}45%{transform:scaleY(.12)}}
+@keyframes buddy-nap{50%{transform:translateY(1.2px) scaleY(.98)}}@keyframes buddy-love{0%{opacity:0;transform:translateY(8px) scale(.6)}28%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-12px) scale(1.05)}}
+@keyframes buddy-hop{0%,100%{transform:none}40%{transform:translateY(-4px) scaleY(1.04)}70%{transform:translateY(0)}}
+@keyframes buddy-look{0%,100%{transform:none}40%,70%{transform:rotate(-7deg)}}
+@keyframes buddy-nuzzle{0%,100%{transform:none}50%{transform:translateX(4px) rotate(3deg)}}
+@keyframes buddy-wave{0%,100%{transform:rotate(-125deg)}50%{transform:rotate(-155deg)}}@keyframes buddy-zzz{0%{opacity:0;transform:translate(0,3px)}30%{opacity:1}100%{opacity:0;transform:translate(3px,-5px)}}
+.buddy-z text{animation:buddy-zzz 2.8s ease-out infinite}.buddy-z text:nth-child(2){animation-delay:.9s}
+@media(prefers-reduced-motion:reduce){.character,.eyes,.head,.hand,.pose,.typing-paws>*,.sleep-z text,.heart-fx,.clap-fx,.stretch-fx,.pat-hand,#buddy .buddy-body,#buddy .buddy-eyes,.buddy-z text,.buddy-heart,.buddy-paw{animation:none!important}.buddy-z text{opacity:1}.sleep-z text{opacity:1}#pet[data-action=wave] .hand-right{transform:rotate(-135deg)}#pet[data-pat][data-action=""] .pat-hand{transform:translateY(3px)}}
 #close-card{width:22px;height:22px;border:0;border-radius:7px;background:#eef2e8;color:#71845f;cursor:pointer;padding:0;font-size:16px}#close-card:hover{background:#e1e9d8}
 #card{left:36px;right:36px;padding:11px 13px 10px;border-radius:15px;box-shadow:0 4px 12px #233b2914}header{margin-bottom:8px}.brand{font-size:10px;letter-spacing:.5px;gap:5px}.tools{display:flex;gap:5px}#open-settings,#open-chat{width:22px;height:22px;border:0;border-radius:7px;background:#eef2e8;color:#71845f;cursor:pointer;padding:0;font-size:14px}#open-chat{font-size:10px}#open-chat:hover,#open-settings:hover{background:#e1e9d8}.eyebrow{font-size:10px}#state-label{font-size:9px;padding:2px 5px}.amount{margin:4px 0 6px;gap:4px}.currency{font-size:16px}#earned{font-size:28px;letter-spacing:-1px}.rate-line,#rate{font-size:10px}.divider{margin:7px 0}footer{font-size:10px;gap:5px}#warning{font-size:9px;margin-top:6px}#speech{position:absolute;left:50%;right:auto;transform:translateX(-50%);width:calc(15em + 30px);max-width:calc(100% - 32px);bottom:151px;max-height:170px;overflow:auto;padding:12px 14px;border-radius:15px;border:1px solid #dce5d0;background:#fffef6;box-shadow:0 4px 12px #233b2914;color:#627454;font-size:12px;line-height:1.7;text-align:left;cursor:pointer;white-space:pre-wrap;overflow-wrap:anywhere;z-index:2}body[data-size=small] #speech{bottom:116px}body[data-size=large] #speech{bottom:193px}body.expanded:has(#speech:not([hidden])) #card{visibility:hidden}
+.dialogue{position:absolute;max-width:150px;padding:8px 10px;border-radius:13px;border:1px solid #dce5d0;background:#fffef6;box-shadow:0 3px 10px #233b2914;color:#627454;font-size:11px;line-height:1.6;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;z-index:3;cursor:pointer}
+.dialogue::after{content:"";position:absolute;bottom:-5.5px;width:9px;height:9px;background:#fffef6;border-right:1px solid #dce5d0;border-bottom:1px solid #dce5d0;transform:rotate(45deg)}
+#buddy-dialogue{left:6px;bottom:74px;min-width:100px}
+#buddy-dialogue::after{left:66px}
+#pet-dialogue{right:6px;bottom:134px;text-align:left}
+#pet-dialogue::after{left:16px}
+body[data-size=small] #buddy-dialogue{bottom:58px}body[data-size=small] #buddy-dialogue::after{left:84px}body[data-size=small] #pet-dialogue{bottom:102px}
+body[data-size=large] #buddy-dialogue{bottom:92px}body[data-size=large] #buddy-dialogue::after{left:46px}body[data-size=large] #pet-dialogue{bottom:166px}
+body.expanded:has(.dialogue:not([hidden])) #card{visibility:hidden}
+.affinity-line{display:flex;align-items:center;justify-content:space-between;gap:6px;font-size:9px;color:#a4977f;margin-top:8px;padding-top:7px;border-top:1px solid #eef1e7}
+#affinity-badge{color:#b5816a;font-weight:600}
+#affinity-toast{position:absolute;left:50%;transform:translateX(-50%);width:calc(13em + 26px);max-width:calc(100% - 32px);bottom:151px;padding:9px 12px;border-radius:12px;border:1px solid #ece0c4;background:#fdfbf0;box-shadow:0 3px 10px #233b2914;color:#8d7c55;font-size:11px;line-height:1.7;text-align:center;z-index:3;pointer-events:none;white-space:pre-wrap;overflow-wrap:anywhere}
+body[data-size=small] #affinity-toast{bottom:116px}body[data-size=large] #affinity-toast{bottom:193px}
+body.expanded:has(#affinity-toast:not([hidden])) #card{visibility:hidden}
+#cake{position:absolute;right:calc(50% - 106px);bottom:96px;width:36px;height:31px;pointer-events:none;z-index:2}
+body[data-size=small] #cake{right:calc(50% - 25px);bottom:72px}body[data-size=large] #cake{right:calc(50% - 55px);bottom:126px}
+body:not([data-festival=birthday]) #cake{display:none}
+.wear .thin{stroke-width:2.2}
+#buddy .wear .thin{stroke-width:4.7}
+#pet[data-egg=daze] .eyes{display:none}#pet[data-egg=daze] .star-eyes{display:block}#pet[data-egg=daze] .head{animation:daze 1.6s ease-in-out infinite}
+#pet[data-egg=tail] .pose{animation:tail-spin 1.1s ease-in-out}
+#pet[data-egg=sneeze] .head{animation:sneeze .5s ease-in-out 2}
+#pet[data-egg=sneeze] .egg-sneeze{display:block}
+#pet[data-egg=purr] .eyes{display:none}#pet[data-egg=purr] .happy-eyes{display:block}#pet[data-egg=purr] .head{animation:purr .9s ease-in-out infinite}
+#pet[data-egg=shy] .hand-left{transform:translate(0,-26px) rotate(12deg)}#pet[data-egg=shy] .hand-right{transform:translate(0,-26px) rotate(-12deg)}#pet[data-egg=shy] .shy-fx{display:block;opacity:.3}#pet[data-egg=shy] .pose{animation:shy .6s ease-in-out infinite}
+#buddy[data-egg=trip] .buddy-body{animation:buddy-trip .5s ease-in-out 2}
+#pet[data-corner] .pose{transform:translateY(14px) rotate(-82deg) scale(.86)}
+#pet[data-corner] .eyes{display:none}#pet[data-corner] .sleep-eyes{display:block}#pet[data-corner] .sleep-z{display:block}
+@keyframes daze{50%{transform:translateY(-2px) rotate(2deg)}}
+@keyframes tail-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+@keyframes sneeze{0%,100%{transform:none}40%{transform:translateY(3px) rotate(4deg)}}
+@keyframes purr{50%{transform:translateY(1px) scaleY(.97)}}
+@keyframes buddy-trip{0%,100%{transform:none}30%{transform:rotate(6deg) translateY(2px)}60%{transform:rotate(-4deg)}}
+#snack{position:absolute;right:calc(50% - 55px);bottom:54px;width:28px;height:28px;pointer-events:none;z-index:3}
+body[data-size=small] #snack{right:calc(50% - 25px);bottom:38px}body[data-size=large] #snack{right:calc(50% - 78px);bottom:73px}
+#snack[data-kind=""]{display:none}
+#snack svg g{display:none}
+#snack[data-kind=cookie] .snack-cookie,#snack[data-kind=fish] .snack-fish,#snack[data-kind=tea] .snack-tea{display:block}
+#snack.eating svg{animation:snack-eat 2.6s ease-in forwards}
+#pet[data-feed] .happy-eyes{display:block}#pet[data-feed] .eyes{display:none}#pet[data-feed] .head{animation:feed-bob .6s ease-in-out infinite}
+#buddy[data-feed=happy] .buddy-body{animation:buddy-hop .5s ease-in-out 3}
+body[data-walking=left] .pose,body[data-walking=right] .pose{animation:walk .36s ease-in-out infinite}
+body[data-walking] .buddy-body{animation:buddy-walk .36s ease-in-out infinite}
+@keyframes snack-eat{0%{opacity:0;transform:translateY(6px) scale(.6)}20%{opacity:1;transform:translateY(0) scale(1)}80%{opacity:1;transform:translate(-26px,6px) scale(.7)}100%{opacity:0;transform:translate(-34px,8px) scale(.2)}}
+@keyframes feed-bob{50%{transform:translateY(2px) scaleY(.97)}}
+@keyframes walk{50%{transform:translateY(-3px) rotate(-1.5deg)}}
+@keyframes buddy-walk{50%{transform:translateY(-2px)}}

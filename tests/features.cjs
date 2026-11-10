@@ -8,10 +8,16 @@ const {toggleIncome}=require('./income-menu.cjs');
     const env={...process.env,SALARY_PET_PROFILE:profile};delete env.ELECTRON_RUN_AS_NODE;
     app=await electron.launch({args:[path.resolve('.')],env});
     const form=app.windows().find(p=>p.url().endsWith('settings.html'))??await app.waitForEvent('window',p=>p.url().endsWith('settings.html'));
-    form.setDefaultTimeout(6000);await form.locator('#salary').fill('10000');
-    await form.locator('#pet-size').selectOption('small');await form.locator('#action-clap').uncheck();await form.locator('#save').click();await form.locator('#notice').filter({hasText:'已保存'}).waitFor();
+    form.setDefaultTimeout(6000);
+    await form.locator('#affinity-level').waitFor();
+    await form.locator('#pet-size').selectOption('small');await form.locator('#action-clap').uncheck();
+    await form.locator('#tab-salary').click();await form.locator('#salary').fill('10000');
+    await form.locator('#save').click();await form.locator('#notice').filter({hasText:'已保存'}).waitFor();
+    await form.locator('#tab-ai').click();
     const pet=app.windows().find(p=>p.url().endsWith('pet.html'));pet.setDefaultTimeout(6000);
     await pet.waitForFunction(()=>document.querySelector('#pet').getBoundingClientRect().width===135);
+    await pet.waitForFunction(()=>document.querySelector('#affinity-badge')?.textContent?.includes('陌生'));
+    assert.ok((await pet.locator('#affinity-days').textContent()).includes('认识第 1 天'),'companionship days show on the income card');
     const prefs=await form.evaluate(()=>window.petAPI.getState());assert.equal(prefs.preferences.size,'small');assert.equal(prefs.preferences.actions.includes('clap'),false);
     const font=await pet.locator('#earned').evaluate(el=>getComputedStyle(el).fontSize);
     for(const [size,width,height] of [['small',135,315],['medium',180,350],['large',234,392]]){
@@ -45,7 +51,7 @@ const {toggleIncome}=require('./income-menu.cjs');
       if(activity==='sleeping')assert.equal(await pet.locator('.sleep-z').evaluate(el=>getComputedStyle(el).display)!=='none',true);
     }
     await toggleIncome(app,pet);await pet.locator('#card').waitFor({state:'visible'});await pet.locator('#open-settings').click();await pet.locator('#close-card').click();await pet.locator('#card').waitFor({state:'hidden'});
-    const settings=app.windows().find(p=>p.url().endsWith('settings.html'))??await app.waitForEvent('window',p=>p.url().endsWith('settings.html'));await settings.locator('#salary').waitFor();
+    const settings=app.windows().find(p=>p.url().endsWith('settings.html'))??await app.waitForEvent('window',p=>p.url().endsWith('settings.html'));await settings.locator('#tab-salary').click();await settings.locator('#salary').waitFor();
     // One enabled action makes each screenshot deterministic; random selection is unit tested.
     for(const action of ['heart','wave','clap','nod','shy','stretch']){
       await settings.evaluate(async action=>{const s=await window.petAPI.getState();await window.petAPI.save(s.config,{...s.preferences,actions:[action]});},action);
@@ -58,11 +64,35 @@ const {toggleIncome}=require('./income-menu.cjs');
       await pet.waitForFunction(()=>document.querySelector('#pet').dataset.action==='');
       assert.equal(await pet.locator('#pet').getAttribute('data-activity'),'waving');
     }
+    const buddy=pet.locator('#buddy');
+    await buddy.click({force:true});
+    assert.equal(await buddy.getAttribute('data-link'),'poke','buddy click must trigger its reaction');
+    assert.equal(await pet.locator('#pet').getAttribute('data-link'),'look','一二 must look at 布布');
+    assert.equal(await pet.locator('#pet').getAttribute('data-action'),'','buddy click must not trigger a pet action');
+    await pet.waitForFunction(()=>!document.querySelector('#buddy').dataset.link,{},{timeout:4000});
+    await settings.locator('#tab-ai').click();
     await settings.locator('#toggle-actions').click(); // Turn currently enabled action off.
-    await settings.locator('#save').click();await settings.locator('#notice').filter({hasText:'已保存'}).waitFor();
+    await settings.locator('#pet-save').click();await settings.locator('#pet-notice').filter({hasText:'已保存'}).waitFor();
     await pet.waitForFunction(()=>document.querySelector('#pet').dataset.enabledActions==='');
     await pet.locator('#pet').click();assert.equal(await pet.locator('#pet').getAttribute('data-action'),'');
-    await settings.locator('#toggle-actions').click();await settings.locator('#save').click();await settings.locator('#notice').filter({hasText:'已保存'}).waitFor();await settings.locator('#close').click();
+    await settings.locator('#toggle-actions').click();await settings.locator('#pet-save').click();await settings.locator('#pet-notice').filter({hasText:'已保存'}).waitFor();
+    await settings.locator('#tab-voice').click();
+    await settings.locator('#voice-enabled').waitFor();
+    assert.equal(await settings.locator('#voice-provider').inputValue(),'qwen','Qwen is the default voice provider');
+    await settings.locator('#voice-workspace').waitFor({state:'visible'});
+    assert.equal(await settings.locator('#voice-key-status').textContent(),'尚未保存密钥','voice settings start without a key');
+    assert.equal(await settings.locator('#voice-speed').inputValue(),'100','default speech speed is 1x');
+    const voiceState=await settings.evaluate(()=>window.petAPI.getVoice());
+    assert.equal(voiceState.samples.yier,true,'一二 voice sample is bundled');
+    assert.equal(voiceState.samples.bubu,true,'布布 voice sample is bundled');
+    assert.equal(voiceState.library.builtins.length,2,'two non-deletable built-in voices are listed');
+    assert.equal(voiceState.library.assignments.yier,'builtin:yier','built-in voice is assigned by default');
+    await settings.locator('#tab-yier').click();
+    await settings.locator('#outfit-yier .outfit-item[data-slot="head"][data-item="beanie"]').click();
+    await pet.waitForFunction(()=>{const group=document.querySelector('#pet .wear[data-slot="head"][data-item="beanie"]');return !!group&&getComputedStyle(group).display!=='none';});
+    assert.equal((await settings.evaluate(()=>window.petAPI.getState())).preferences.outfits.yier.head,'beanie','outfit click must persist per slot');
+    await settings.locator('#tab-ai').click();
+    await settings.locator('#close').click();
     await pet.waitForFunction(()=>document.querySelector('#pet').dataset.enabledActions.split(',').length===6);
     await pet.mouse.move(2,2);await pet.locator('#card').waitFor({state:'hidden'});
     const box=await pet.locator('#pet').boundingBox();await pet.mouse.move(box.x+box.width/2,box.y+box.height/2);await pet.mouse.down();await pet.mouse.move(box.x+box.width/2-30,box.y+box.height/2-20,{steps:6});await pet.mouse.up();

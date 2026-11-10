@@ -1,7 +1,9 @@
 import type {Status} from './core.ts';
+import {normalizeOutfits} from './outfits.ts';
+import type {Outfits} from './outfits.ts';
 export type Action='heart'|'wave'|'clap'|'nod'|'shy'|'stretch';
 export type PetSize='small'|'medium'|'large';
-export interface Preferences {size:PetSize;actions:Action[]}
+export interface Preferences {size:PetSize;actions:Action[];wander?:boolean;outfits?:Outfits}
 export const ACTIONS:ReadonlyArray<{id:Action;label:string;description:string}>=[
   {id:'heart',label:'比心',description:'抱起双手，送你一颗爱心'},
   {id:'wave',label:'招手',description:'举起小手打个招呼'},
@@ -13,7 +15,7 @@ export const ACTIONS:ReadonlyArray<{id:Action;label:string;description:string}>=
 export const SIZES:ReadonlyArray<{id:PetSize;label:string;scale:number}>=[{id:'small',label:'小号 · 75%',scale:.75},{id:'medium',label:'中号 · 100%',scale:1},{id:'large',label:'大号 · 130%',scale:1.3}];
 export function normalizePreferences(input:unknown):Preferences{
   const p=input&&typeof input==='object'?input as Record<string,unknown>:{};
-  return {size:SIZES.some(s=>s.id===p.size)?p.size as PetSize:'medium',actions:Array.isArray(p.actions)?[...new Set(p.actions.filter((a):a is Action=>ACTIONS.some(item=>item.id===a)))]:ACTIONS.map(a=>a.id)};
+  return {size:SIZES.some(s=>s.id===p.size)?p.size as PetSize:'medium',actions:Array.isArray(p.actions)?[...new Set(p.actions.filter((a):a is Action=>ACTIONS.some(item=>item.id===a)))]:ACTIONS.map(a=>a.id),wander:p.wander===true,outfits:normalizeOutfits(p.outfits)};
 }
 export function chooseAction(enabled:Action[],previous:Action|null,random:()=>number=Math.random):Action|null{
   const options=enabled.length>1?enabled.filter(a=>a!==previous):enabled;

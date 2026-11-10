@@ -9,6 +9,9 @@ export interface AIConfig {
   customPrompt: string;
   proactive: 'off' | 'schedule' | 'occasional';
   proactiveIntervalMinutes: number;
+  dialogue: boolean;
+  dialogueIntervalMinutes: number;
+  buddyPrompt: string;
   memory: boolean;
   shareIncome: boolean;
 }
@@ -63,6 +66,8 @@ export function normalizeAIConfig(input: unknown): AIConfig {
   if (/[\u0000-\u001f\u007f]/.test(nickname)) throw new Error('称呼不能含控制字符');
   const proactiveIntervalMinutes=value.proactiveIntervalMinutes===undefined?30:value.proactiveIntervalMinutes;
   if(typeof proactiveIntervalMinutes!=='number'||!Number.isInteger(proactiveIntervalMinutes)||proactiveIntervalMinutes<1||proactiveIntervalMinutes>1440)throw new Error('主动说话间隔须为1到1440之间的整数分钟');
+  const dialogueIntervalMinutes=value.dialogueIntervalMinutes===undefined?30:value.dialogueIntervalMinutes;
+  if(typeof dialogueIntervalMinutes!=='number'||!Number.isInteger(dialogueIntervalMinutes)||dialogueIntervalMinutes<1||dialogueIntervalMinutes>1440)throw new Error('双人对话间隔须为1到1440之间的整数分钟');
   return {
     enabled: flag(value.enabled), provider, baseUrl: endpoint(value.baseUrl, defaults.baseUrl), model, nickname,
     personaMode: choice(value.personaMode, ['preset', 'custom'], 'preset'),
@@ -70,6 +75,9 @@ export function normalizeAIConfig(input: unknown): AIConfig {
     customPrompt: text(value.customPrompt, '', 4000, '自定义人设'),
     proactive: choice(value.proactive, ['off', 'schedule', 'occasional'], 'off'),
     proactiveIntervalMinutes,
+    dialogue: flag(value.dialogue),
+    dialogueIntervalMinutes,
+    buddyPrompt: text(value.buddyPrompt, '', 1000, '布布人设'),
     memory: flag(value.memory), shareIncome: flag(value.shareIncome),
   };
 }

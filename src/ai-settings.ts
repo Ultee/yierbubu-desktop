@@ -8,11 +8,13 @@ export function initAISettings(){
   const message=(text:string,failed=false)=>{notice.textContent=text;notice.classList.toggle('failed',failed);};
   const persona=()=>{document.getElementById('ai-custom-fields')!.hidden=input('persona-mode').value!=='custom';document.getElementById('ai-preset-fields')!.hidden=input('persona-mode').value==='custom';};
   const proactive=()=>{document.getElementById('ai-interval-fields')!.hidden=input('proactive').value!=='occasional';};
-  const draft=():AIConfig=>({enabled:input('enabled').checked,provider:input('provider').value as AIConfig['provider'],baseUrl:input('base-url').value,model:input('model').value,nickname:input('nickname').value,personaMode:input('persona-mode').value as AIConfig['personaMode'],persona:input('persona').value as AIConfig['persona'],customPrompt:input('custom-prompt').value,proactive:input('proactive').value as AIConfig['proactive'],proactiveIntervalMinutes:Number(input('proactive-minutes').value),memory:input('memory').checked,shareIncome:input('share-income').checked});
+  const dialogueFields=()=>{document.getElementById('ai-dialogue-fields')!.hidden=!input('dialogue').checked;};
+  const draft=():AIConfig=>({enabled:input('enabled').checked,provider:input('provider').value as AIConfig['provider'],baseUrl:input('base-url').value,model:input('model').value,nickname:input('nickname').value,personaMode:input('persona-mode').value as AIConfig['personaMode'],persona:input('persona').value as AIConfig['persona'],customPrompt:input('custom-prompt').value,proactive:input('proactive').value as AIConfig['proactive'],proactiveIntervalMinutes:Number(input('proactive-minutes').value),dialogue:input('dialogue').checked,dialogueIntervalMinutes:Number(input('dialogue-minutes').value),buddyPrompt:input('buddy-prompt').value,memory:input('memory').checked,shareIncome:input('share-income').checked});
   function show(config:AIConfig,hasKey:boolean,warning=''){
     for(const key of ['enabled','memory','shareIncome'] as const)input(key==='shareIncome'?'share-income':key).checked=config[key];
-    for(const [id,key] of [['provider','provider'],['base-url','baseUrl'],['model','model'],['nickname','nickname'],['persona-mode','personaMode'],['persona','persona'],['custom-prompt','customPrompt'],['proactive','proactive']] as const)input(id).value=config[key];
+    for(const [id,key] of [['provider','provider'],['base-url','baseUrl'],['model','model'],['nickname','nickname'],['persona-mode','personaMode'],['persona','persona'],['custom-prompt','customPrompt'],['buddy-prompt','buddyPrompt'],['proactive','proactive']] as const)input(id).value=config[key];
     input('proactive-minutes').value=String(config.proactiveIntervalMinutes);proactive();
+    input('dialogue').checked=config.dialogue;input('dialogue-minutes').value=String(config.dialogueIntervalMinutes);dialogueFields();
     input('key').value='';input('key').placeholder=hasKey?'密钥已加密保存，留空保持原密钥':'粘贴服务商提供的 API Key';
     document.getElementById('ai-key-status')!.textContent=hasKey?'已保存密钥':'尚未保存密钥';removeKey=false;persona();if(warning)message(warning,true);
   }
@@ -23,6 +25,7 @@ export function initAISettings(){
   });
   input('persona-mode').addEventListener('change',persona);
   input('proactive').addEventListener('change',proactive);
+  input('dialogue').addEventListener('change',dialogueFields);
   input('key').addEventListener('input',()=>{if(input('key').value)removeKey=false;});
   document.getElementById('ai-remove-key')!.addEventListener('click',()=>{removeKey=true;input('key').value='';message('点击“保存 AI 设置”后移除已存密钥。');});
   async function run(test:boolean){

@@ -1,16 +1,19 @@
-import {BrowserWindow,ipcMain,safeStorage,screen} from 'electron';
+import {BrowserWindow,ipcMain,safeStorage,screen,powerMonitor} from 'electron';
 import type {IpcMainEvent,IpcMainInvokeEvent} from 'electron';
 import {join} from 'node:path';
 import {AiService} from './ai-service.ts';
 import {ProactivePolicy} from './ai-proactive.ts';
+import {parseDialogue} from './ai-dialogue.ts';
 import type {Config,Snapshot} from './core.ts';
 import type {AIResult} from './ai-config.ts';
 
-interface Host {dir:string;pet:()=>BrowserWindow|null;settings:()=>BrowserWindow|null;context:()=>{config:Config|null;snapshot:Snapshot};protect:(w:BrowserWindow)=>void;broadcast:()=>void}
+interface Host {dir:string;pet:()=>BrowserWindow|null;settings:()=>BrowserWindow|null;context:()=>{config:Config|null;snapshot:Snapshot};protect:(w:BrowserWindow)=>void;broadcast:()=>void;affinityChat?:()=>void}
 export function installAI(host:Host){
   const service=new AiService(host.dir,{available:()=>safeStorage.isEncryptionAvailable(),encrypt:text=>safeStorage.encryptString(text),decrypt:buffer=>safeStorage.decryptString(buffer)});
   const policy=new ProactivePolicy();
-  let chat:BrowserWindow|null=null,busy=false,error='',generation=0,testBusy=false;
+  let chat:BrowserWindow|null=null,busy=false,error='',generation=0,testBusy=false,lastAction=0,dialogueBusy=false,lastDialogue=Date.now(),previousStatus:string|undefined,locked=false;
+  const onLock=()=>{locked=true;},onUnlock=()=>{locked=false;};
+  powerMonitor.on('lock-screen',onLock);powerMonitor.on('unlock-screen',onUnlock);
   const own=(event:IpcMainEvent|IpcMainInvokeEvent,w:BrowserWindow|null)=>!!w&&!w.isDestroyed()&&event.sender===w.webContents&&event.senderFrame===w.webContents.mainFrame;
   const allowed=(e:IpcMainEvent|IpcMainInvokeEvent)=>[host.pet(),host.settings(),chat].some(w=>own(e,w));
   function changed(){host.broadcast();if(chat&&!chat.isDestroyed())chat.webContents.send('changed');}
@@ -29,9 +32,34 @@ export function installAI(host:Host){
       if(token!==generation)return {ok:false,error:'设置或记忆已变更，请重新发送。'};
       if(!result.ok)error=result.error??'暂时没有收到回复，请重试。';
       else if(proactive&&result.text)host.pet()?.webContents.send('speech',result.text.slice(0,240));
+      if(result.ok&&!proactive)host.affinityChat?.();
       return result;
     }catch{if(token===generation)error='暂时无法聊天，请稍后重试。';return {ok:false,error:'暂时无法聊天，请稍后重试。'};}
     finally{if(token===generation){busy=false;changed();}}
+  }
+  async function actionReply(action:string):Promise<AIResult>{
+    const now=Date.now();
+    if(busy||testBusy||now-lastAction<2000)return {ok:false,error:'跳过'};
+    lastAction=now;
+    try{
+      const result=await service.send(action,host.context(),'action');
+      if(result.ok&&result.text)host.pet()?.webContents.send('speech',result.text.slice(0,240));
+      return result;
+    }catch{return {ok:false,error:'跳过'};}
+  }
+  async function dialogue():Promise<void>{
+    if(dialogueBusy||busy||testBusy)return;
+    const state=service.getState();
+    if(!state.config.enabled||!state.hasKey||!state.config.dialogue)return;
+    dialogueBusy=true;
+    try{
+      const result=await service.send('来一小段你和布布的日常对话吧。',host.context(),'dialogue');
+      if(result.ok&&result.text){
+        const lines=parseDialogue(result.text);
+        if(lines){lastDialogue=Date.now();host.pet()?.webContents.send('dialogue',lines);}
+      }
+    }catch{}
+    finally{dialogueBusy=false;}
   }
   ipcMain.handle('ai-state',e=>{if(!allowed(e))throw new Error('无效请求');return service.getState();});
   ipcMain.handle('ai-save',(e,input:unknown,key:unknown,remove:unknown)=>{
@@ -56,11 +84,20 @@ export function installAI(host:Host){
     if(!own(e,chat)&&!own(e,host.settings()))return {ok:false,error:'无效请求'};
     try{cancel();service.clearHistory();host.pet()?.webContents.send('speech','');changed();return {ok:true};}catch{return {ok:false,error:'清空失败，请检查本地文件夹权限。'};}
   });
+  ipcMain.handle('ai-action',(e,action:unknown)=>{
+    if(!own(e,host.pet())||typeof action!=='string')return {ok:false,error:'无效请求'};
+    return actionReply(action);
+  });
   ipcMain.on('chat-open',e=>{if(allowed(e))openChat();});
   const timer=setInterval(()=>{
-    const state=service.getState(),context=host.context();
-    const due=policy.tick(state.config.enabled&&state.hasKey?state.config.proactive:'off',context.snapshot.status,Date.now(),state.config.proactiveIntervalMinutes);
+    const state=service.getState(),context=host.context(),status=context.snapshot.status,now=Date.now();
+    const due=policy.tick(state.config.enabled&&state.hasKey?state.config.proactive:'off',status,now,state.config.proactiveIntervalMinutes);
     if(due&&!busy&&!testBusy)void send('请根据当前作息，主动说一句简短的陪伴或提醒，不超过60字。',true);
+    const ready=state.config.enabled&&state.hasKey&&state.config.dialogue&&!dialogueBusy&&!busy&&!testBusy&&!locked&&!['lunch','unconfigured','empty','rest'].includes(status);
+    const sceneChange=previousStatus!==undefined&&status!==previousStatus&&['before','working','finished'].includes(status);
+    const intervalDue=status==='working'&&now-lastDialogue>=state.config.dialogueIntervalMinutes*60000;
+    if(ready&&(sceneChange||intervalDue))void dialogue();
+    previousStatus=status;
   },10000);
-  return {openChat,isChat:(e:IpcMainEvent)=>own(e,chat),resetSchedule(){policy.reset();},dispose(){clearInterval(timer);cancel();}};
+  return {openChat,isChat:(e:IpcMainEvent)=>own(e,chat),resetSchedule(){policy.reset();},dispose(){clearInterval(timer);cancel();powerMonitor.removeListener('lock-screen',onLock);powerMonitor.removeListener('unlock-screen',onUnlock);}};
 }

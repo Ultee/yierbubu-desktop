@@ -16,7 +16,7 @@ test('appearance preferences survive restart and legacy files keep salary and sc
     writeFileSync(join(dir,'settings.json'),JSON.stringify({version:1,config,position:{x:10,y:20}}));
     const s=new Store(dir),legacy=s.load();assert.equal(legacy.config?.salaryCents,800000);assert.equal(legacy.preferences.size,'medium');assert.equal(legacy.preferences.actions.length,6);
     s.save({...legacy,preferences:{size:'large',actions:['heart','stretch']}});
-    assert.deepEqual(new Store(dir).load().preferences,{size:'large',actions:['heart','stretch']});
+    assert.deepEqual(new Store(dir).load().preferences,normalizePreferences({size:'large',actions:['heart','stretch']}));
     s.save({...legacy,preferences:{size:'small',actions:[]}});assert.deepEqual(new Store(dir).load().preferences.actions,[]);
   }finally{rmSync(dir,{recursive:true,force:true});}
 });

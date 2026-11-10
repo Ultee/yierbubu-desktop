@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { normalizeAIConfig } from './ai-config.ts';
 import type { AIConfig, AIPublicState, AIResult, ChatMessage } from './ai-config.ts';
 import type { Config, Snapshot } from './core.ts';
-import { BASE_PROMPT, PERSONA_PROMPTS, PROACTIVE_PROMPT } from './ai-prompts.ts';
+import { BASE_PROMPT, PERSONA_PROMPTS, PROACTIVE_PROMPT, ACTION_PROMPT, ACTION_REPLIES, dialoguePrompt } from './ai-prompts.ts';
 export type { AIConfig, AIPublicState, AIResult, ChatMessage } from './ai-config.ts';
 
 interface Cipher { available(): boolean; encrypt(text: string): Buffer; decrypt(buffer: Buffer): string }
@@ -118,10 +118,10 @@ export class AiService {
     ]);
   }
 
-  async send(text: string, context: { config: Config | null; snapshot: Snapshot }, kind: 'chat' | 'proactive' = 'chat'): Promise<AIResult> {
+  async send(text: string, context: { config: Config | null; snapshot: Snapshot }, kind: 'chat' | 'proactive' | 'action' | 'dialogue' = 'chat'): Promise<AIResult> {
     if (!this.config.enabled) return { ok: false, error: '请先在设置中启用 AI 陪伴' };
     if (typeof text !== 'string' || !text.trim() || [...text.trim()].length > 4000) return { ok: false, error: '消息须为 1 至 4000 字' };
-    if (kind !== 'chat' && kind !== 'proactive') return { ok: false, error: '消息类型无效' };
+    if (kind !== 'chat' && kind !== 'proactive' && kind !== 'action' && kind !== 'dialogue') return { ok: false, error: '消息类型无效' };
     if (!context || !context.snapshot) return { ok: false, error: '当前作息状态无法读取' };
     const config = { ...this.config };
     const generation = this.generation;
@@ -132,6 +132,12 @@ export class AiService {
     if (config.nickname) system += `\n用户希望被称为：${config.nickname}。`;
     system += '\n' + (config.personaMode === 'custom' ? `用户自定义人设：${config.customPrompt}` : PERSONA_PROMPTS[config.persona]);
     if (kind === 'proactive') system += `\n主动气泡规则：${PROACTIVE_PROMPT}`;
+    if (kind === 'dialogue') system += `\n双人对话规则：${dialoguePrompt(config.buddyPrompt)}`;
+    if (kind === 'action') {
+      const flavor = ACTION_REPLIES[text.trim()];
+      if (!flavor) return { ok: false, error: '动作类型无效' };
+      system += `\n动作回应规则：${ACTION_PROMPT}\n${flavor}`;
+    }
     system += `\n当前作息状态：${status}。`;
     if (config.shareIncome) {
       const income: Record<string, number | null> = {};
@@ -142,7 +148,7 @@ export class AiService {
       }
       system += `\n用户已授权分享的当前收入快照（金额分、秒薪元/秒）：${JSON.stringify(income)}`;
     }
-    const user: ChatMessage = { role: 'user', content: text.trim() };
+    const user: ChatMessage = { role: 'user', content: kind === 'action' ? '用户刚点了一下一二。' : kind === 'dialogue' ? '来一小段你和布布的日常对话吧。' : text.trim() };
     const result = await this.request(config, this.key, [
       { role: 'system', content: system },
       ...(config.memory ? this.history.slice(-20) : []),

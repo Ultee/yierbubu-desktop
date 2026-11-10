@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { createCipheriv, createDecipheriv } from 'node:crypto';
 import { normalizeAIConfig, PROVIDERS } from '../src/ai-config.ts';
 import { AiService } from '../src/ai-service.ts';
+import { parseDialogue } from '../src/ai-dialogue.ts';
 import { snapshot } from '../src/core.ts';
 
 // A real reversible cipher substitute exercises the encryption boundary without Electron.
@@ -32,6 +33,7 @@ const draft = (baseUrl: string, extra: object = {}) => ({ enabled: true, provide
 test('configuration defaults are private and provider/persona choices normalize safely', () => {
   const c = normalizeAIConfig(undefined);
   assert.equal(c.enabled, false); assert.equal(c.memory, false); assert.equal(c.shareIncome, false); assert.equal(c.proactive, 'off'); assert.equal(c.persona, 'gentle');
+  assert.equal(c.dialogue, false); assert.equal(c.dialogueIntervalMinutes, 30); assert.equal(c.buddyPrompt, '');
   assert.deepEqual(PROVIDERS.map(p => p.id), ['openai', 'deepseek', 'qwen', 'custom']);
   assert.equal(normalizeAIConfig({ provider: 'deepseek' }).model, 'deepseek-chat');
   assert.equal(normalizeAIConfig({ provider: 'qwen' }).baseUrl, 'https://dashscope.aliyuncs.com/compatible-mode/v1');
@@ -41,7 +43,7 @@ test('configuration defaults are private and provider/persona choices normalize 
 });
 
 test('configuration rejects malformed input, unsafe endpoints and excessive or mistyped fields', () => {
-  for (const input of [null, [], 'x', { enabled: 'false' }, { memory: 1 }, { provider: 'other' }, { persona: 'other' }, { proactive: 'often' }, { personaMode: 'other' }, { nickname: '啊'.repeat(31) }, { customPrompt: 'x'.repeat(4001) }, { model: '' }, { model: 'x\ny' }, { baseUrl: 'http://example.com/v1' }, { baseUrl: 'ftp://127.0.0.1' }, { baseUrl: 'https://user:secret@example.com' }, { baseUrl: 'https://example.com?key=secret' }, { baseUrl: 'https://example.com/#secret' }, { baseUrl: 123 }]) assert.throws(() => normalizeAIConfig(input));
+  for (const input of [null, [], 'x', { enabled: 'false' }, { memory: 1 }, { dialogue: 1 }, { dialogueIntervalMinutes: 0 }, { dialogueIntervalMinutes: 1.5 }, { buddyPrompt: 1 }, { buddyPrompt: 'x'.repeat(1001) }, { provider: 'other' }, { persona: 'other' }, { proactive: 'often' }, { personaMode: 'other' }, { nickname: '啊'.repeat(31) }, { customPrompt: 'x'.repeat(4001) }, { model: '' }, { model: 'x\ny' }, { baseUrl: 'http://example.com/v1' }, { baseUrl: 'ftp://127.0.0.1' }, { baseUrl: 'https://user:secret@example.com' }, { baseUrl: 'https://example.com?key=secret' }, { baseUrl: 'https://example.com/#secret' }, { baseUrl: 123 }]) assert.throws(() => normalizeAIConfig(input));
   for (const baseUrl of ['https://api.example.com/v1/', 'http://127.0.0.1:8080/v1', 'http://localhost:8080', 'http://[::1]:8080/v1']) assert.ok(normalizeAIConfig({ baseUrl }).baseUrl);
 });
 
@@ -293,6 +295,56 @@ test('requests carry complete base rules, exactly the selected persona and proac
     await service.send('主动陪伴', context, 'proactive');
     const proactive = payloads.at(-1).messages[0].content;
     for (const rule of ['20～40字', '最多60字', '只表达一个主题', '不要求回复', '不重复可见历史']) assert.ok(proactive.includes(rule), rule);
+    assert.equal(JSON.stringify(payloads.at(-1)).includes('87654321'), false);
+  } finally { await fake.close(); rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('dialogue kind sends two-pet rules, stores assistant-only history and parses strictly', async () => {
+  const dir = temporary(); const payloads: any[] = [];
+  const fake = await server((_req, res, body) => { payloads.push(body); reply(res, '一二：今天也一起加油。\n布布：好呀，我陪你。'); });
+  try {
+    const service = new AiService(dir, cipher); service.save(draft(fake.url, { memory: true }), 'fake-key');
+    assert.equal((await service.send('来一小段你和布布的日常对话吧。', context, 'dialogue')).ok, true);
+    const system = payloads[0].messages[0].content;
+    for (const rule of ['双人对话规则', '一二：', '布布：', '8～25字', '布布是一只憨憨的棕色小熊']) assert.ok(system.includes(rule), rule);
+    assert.equal(system.includes('主动气泡规则'), false);
+    assert.equal(payloads[0].messages.at(-1).content, '来一小段你和布布的日常对话吧。');
+    assert.equal(service.getHistory().length, 1);
+    assert.equal(service.getHistory()[0].role, 'assistant');
+    assert.deepEqual(parseDialogue('一二：今天也一起加油。\n布布：好呀，我陪你。'), [{ who: 'yier', text: '今天也一起加油。' }, { who: 'bubu', text: '好呀，我陪你。' }]);
+    assert.deepEqual(parseDialogue('一二：好\n第二行没有角色\n布布：嗯'), [{ who: 'yier', text: '好' }, { who: 'bubu', text: '嗯' }], 'stray lines are discarded, labelled lines remain');
+    assert.equal(parseDialogue('随便聊聊'), null);
+    assert.equal(parseDialogue(`一二：${'长'.repeat(200)}\n布布：好`)?.[0].text.length, 80);
+    assert.equal(parseDialogue('一二：1\n布布：2\n一二：3\n布布：4\n一二：5')?.length, 5);
+    assert.equal(parseDialogue('一二：1\n布布：2\n一二：3\n布布：4\n一二：5\n布布：6\n一二：7')?.length, 6, 'at most six lines');
+    assert.deepEqual(parseDialogue('布布：先说的也可以是布布\n一二：好'), [{ who: 'bubu', text: '先说的也可以是布布' }, { who: 'yier', text: '好' }]);
+    service.save(draft(fake.url, { memory: true, buddyPrompt: '布布是一只爱睡觉的小熊。' }));
+    await service.send('来一小段你和布布的日常对话吧。', context, 'dialogue');
+    const custom = payloads.at(-1).messages[0].content;
+    assert.ok(custom.includes('布布是一只爱睡觉的小熊。'), 'custom buddy prompt reaches the request');
+    assert.equal(custom.includes('憨憨的棕色小熊'), false, 'custom buddy prompt replaces the default');
+  } finally { await fake.close(); rmSync(dir, { recursive: true, force: true }); }
+});
+
+test('click actions map to distinct emotion rules and append assistant-only history', async () => {
+  const dir = temporary(); const payloads: any[] = [];
+  const fake = await server((_req, res, body) => { payloads.push(body); reply(res, '嘿嘿，给你讲个笑话。'); });
+  try {
+    const service = new AiService(dir, cipher); service.save(draft(fake.url, { memory: true }), 'fake-key');
+    assert.equal((await service.send('unknown-action', context, 'action')).ok, false);
+    assert.equal(payloads.length, 0);
+    const markers: Record<string, string> = { heart: '比心', wave: '打招呼', clap: '鼓掌', nod: '点头', shy: '害羞', stretch: '伸懒腰' };
+    for (const [index, [action, marker]] of Object.entries(markers).entries()) {
+      assert.equal((await service.send(action, context, 'action')).ok, true);
+      const system = payloads.at(-1).messages[0].content;
+      for (const rule of ['动作回应规则', '20～40字', '不要描述动作', marker]) assert.ok(system.includes(rule), `${action}: ${rule}`);
+      assert.equal(system.includes('只表达一个主题'), false, 'action does not inherit proactive wording');
+      assert.equal(payloads.at(-1).messages.at(-1).content, '用户刚点了一下一二。');
+      assert.equal(service.getHistory().length, index + 1);
+      assert.equal(service.getHistory().at(-1)?.role, 'assistant');
+      const disk = readdirSync(dir).map(file => readFileSync(join(dir, file), 'utf8')).join('');
+      assert.equal(disk.includes('用户刚点了一下一二。'), false, 'action trigger is never persisted');
+    }
     assert.equal(JSON.stringify(payloads.at(-1)).includes('87654321'), false);
   } finally { await fake.close(); rmSync(dir, { recursive: true, force: true }); }
 });

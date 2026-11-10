@@ -11,10 +11,15 @@ test('only enabled actions are selected and consecutive repeats are avoided',()=
 });
 test('old settings gain medium size and default enabled interactions; all-off remains off',()=>{
   const defaults=normalizePreferences(undefined);
-  assert.equal(defaults.size,'medium');assert.equal(defaults.actions.length,6);
-  assert.deepEqual(normalizePreferences({size:'small',actions:[]}),{size:'small',actions:[]});
+  assert.equal(defaults.size,'medium');assert.equal(defaults.actions.length,6);assert.equal(defaults.wander,false);
+  assert.deepEqual(defaults.outfits,{yier:{head:null,face:null,neck:null,body:null,hand:null},bubu:{head:null,face:null,neck:null,body:null,hand:null}});
+  assert.deepEqual(normalizePreferences({size:'small',actions:[]}),{size:'small',actions:[],wander:false,outfits:defaults.outfits});
   assert.equal(normalizePreferences({size:'giant',actions:['wave','wave','shell']} ).size,'medium');
   assert.deepEqual(normalizePreferences({actions:['wave','wave','shell']}).actions,['wave']);
+  assert.equal(normalizePreferences({wander:true}).wander,true);
+  assert.equal(normalizePreferences({wander:'yes'}).wander,false);
+  assert.equal(normalizePreferences({outfits:{yier:{head:'beanie'}}}).outfits?.yier?.head,'beanie');
+  assert.equal(normalizePreferences({outfits:{yier:{head:'unknown'}}}).outfits?.yier?.head,null);
 });
 test('schedule status selects typing, lying asleep or waving without changing income',()=>{
   assert.equal(activityFor('working'),'typing');assert.equal(activityFor('lunch'),'sleeping');
