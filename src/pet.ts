@@ -11,7 +11,7 @@ const petDialogue=document.getElementById('pet-dialogue')!,buddyDialogue=documen
 let speechTimer:ReturnType<typeof setTimeout>|undefined;
 const text=(id:string,value:string)=>{document.getElementById(id)!.textContent=value;};
 let actionTimer:ReturnType<typeof setTimeout>|undefined,actionFrame:number|undefined;
-let dragging=false,lastIgnore:boolean|undefined,gesture:Gesture|null=null;
+let dragging=false,lastIgnore:boolean|undefined,gesture:Gesture|null=null,dragSource:'pet'|'buddy'='pet',buddyClickSuppress=0;
 let preferences=normalizePreferences(undefined),previousAction:Action|null=null;
 let voiceEnabled=false,voiceVolume=.8,voiceSpeed=1,voiceProvider='qwen',voiceGeneration=0,voiceAudio:HTMLAudioElement|null=null,voiceUrl='';
 let voiceAudios=new Map<number,string>(),voiceFailures=new Set<number>(),voiceWaiters=new Map<number,(audio:string|null)=>void>(),voiceEndResolver:(()=>void)|null=null;
@@ -72,24 +72,46 @@ function react(){
 }
 pet.addEventListener('pointerenter',()=>{if(!gesture&&!dragging){pet.dataset.pat='';startPat();}});
 pet.addEventListener('pointerleave',()=>{delete pet.dataset.pat;stopPat();});
-pet.addEventListener('pointerdown',event=>{
-  if(event.button!==0)return;event.preventDefault();stopAction();clearLink();stopDialogue();stopFeed();stopPat();delete pet.dataset.corner;maybeGreet();gesture=new Gesture(event.screenX,event.screenY);pet.setPointerCapture(event.pointerId);window.petAPI.drag('start');window.petAPI.passthrough(false);lastIgnore=false;
-});
-pet.addEventListener('pointermove',event=>{
+function beginDrag(event:PointerEvent,source:'pet'|'buddy'){
+  if(event.button!==0)return;
+  if(gesture)cancelDrag();
+  event.preventDefault();stopAction();clearLink();stopDialogue();stopFeed();stopPat();delete pet.dataset.corner;
+  if(source==='pet')maybeGreet();
+  dragSource=source;gesture=new Gesture(event.screenX,event.screenY);
+  try{(source==='buddy'?buddy:pet).setPointerCapture(event.pointerId);}catch{}
+  window.petAPI.drag('start');window.petAPI.passthrough(false);lastIgnore=false;
+}
+function moveDrag(event:PointerEvent){
   if(!gesture)return;
   if(gesture.move(event.screenX,event.screenY)){
     if(!dragging){dragging=true;pet.classList.add('dragging');card.hidden=true;speech.hidden=true;document.body.classList.remove('expanded');}
     window.petAPI.drag('move');
   }
-});
-function end(event:PointerEvent,cancelled=false){
-  if(!gesture)return;gesture.move(event.screenX,event.screenY);
-  const tap=gesture.finish(cancelled);gesture=null;window.petAPI.drag('end');
-  if(dragging){dragging=false;pet.classList.remove('dragging');}
-  lastIgnore=undefined;if(tap)react();
 }
-pet.addEventListener('pointerup',event=>end(event));
-pet.addEventListener('lostpointercapture',event=>end(event,true));pet.addEventListener('pointercancel',event=>end(event,true));
+function endDrag(event:PointerEvent,cancelled=false){
+  if(!gesture)return;
+  gesture.move(event.screenX,event.screenY);
+  const tap=gesture.finish(cancelled),source=dragSource;
+  gesture=null;window.petAPI.drag('end');
+  if(dragging){dragging=false;pet.classList.remove('dragging');}
+  lastIgnore=undefined;
+  if(source==='buddy'){
+    if(tap)pokeBuddy();
+    buddyClickSuppress=performance.now()+400;
+  }else if(tap)react();
+}
+function cancelDrag(){
+  if(gesture){gesture=null;if(dragging){dragging=false;pet.classList.remove('dragging');}}
+  lastIgnore=undefined;window.petAPI.drag('cancel');
+}
+pet.addEventListener('pointerdown',event=>beginDrag(event,'pet'));
+buddy.addEventListener('pointerdown',event=>beginDrag(event,'buddy'));
+window.addEventListener('pointermove',moveDrag);
+window.addEventListener('pointerup',event=>endDrag(event));
+window.addEventListener('pointercancel',event=>endDrag(event,true));
+pet.addEventListener('lostpointercapture',event=>endDrag(event,true));buddy.addEventListener('lostpointercapture',event=>endDrag(event,true));
+window.addEventListener('blur',cancelDrag);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelDrag();});
 let linkTimer:ReturnType<typeof setTimeout>|undefined;
 const linkStages:ReturnType<typeof setTimeout>[]=[];
 function clearLink(){
@@ -246,14 +268,15 @@ function playDialogue(lines:DialogueLine[]){
 }
 petDialogue.addEventListener('click',stopDialogue);buddyDialogue.addEventListener('click',stopDialogue);
 window.petAPI.onDialogue(playDialogue);
-buddy.addEventListener('click',()=>{
-  if(dragging||gesture)return;
+function pokeBuddy(){
+  if(dragging||gesture||performance.now()<buddyClickSuppress)return;
   clearLink();
   buddy.dataset.link='poke';
   if(pet.dataset.activity!=='sleeping')pet.dataset.link='look';
   linkLater(1000,()=>{delete pet.dataset.link;});
   linkLater(1500,()=>{delete buddy.dataset.link;});
-});
+}
+buddy.addEventListener('click',pokeBuddy);
 scheduleLink();
 const affinityBadge=document.getElementById('affinity-badge')!,affinityDays=document.getElementById('affinity-days')!,affinityToast=document.getElementById('affinity-toast')!;
 function renderAffinity(state:{level:number;name:string;days:number;festival:string|null}){

@@ -172,10 +172,13 @@ ipcMain.on('drag',(event,action:unknown)=>{
   // Cursor and window positions must share Electron's native DIP coordinate space.
   // Renderer screen coordinates can shift when a captured window moves on Windows.
   if(action==='start'){
-    if(dragOffset)return;
+    // A lost pointerup must not leave the previous offset blocking every future drag.
+    dragOffset=null;dragMoved=false;
     stopWalk();
     const cursor=screen.getCursorScreenPoint(),[x,y]=pet.getPosition();
-    dragOffset={x:cursor.x-x,y:cursor.y-y};dragMoved=false;pet.setIgnoreMouseEvents(false);
+    dragOffset={x:cursor.x-x,y:cursor.y-y};pet.setIgnoreMouseEvents(false);
+  }else if(action==='cancel'){
+    dragOffset=null;dragMoved=false;
   }else if(action==='move'&&dragOffset){
     if(!dragMoved){dragMoved=true;setIncomeVisible(false);}
     const cursor=screen.getCursorScreenPoint(),p=clamped(cursor.x-dragOffset.x,cursor.y-dragOffset.y),[x,y]=pet.getPosition();

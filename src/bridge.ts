@@ -40,7 +40,7 @@ export interface PetBridge {
   previewVoice(entryId:string):Promise<VoiceResult>;
   speakLine(who:VoiceSpeaker,text:string,emotion?:DialogueLine['emotion']):Promise<VoiceResult>;
   openSettings():void; closeSettings():void; menu():void;
-  passthrough(ignore:boolean):void; drag(action:'start'|'move'|'end'):void;
+  passthrough(ignore:boolean):void; drag(action:'start'|'move'|'end'|'cancel'):void;
   onChanged(listener:()=>void):void;
 }
 declare global { interface Window { petAPI:PetBridge } }

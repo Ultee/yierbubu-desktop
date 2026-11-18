@@ -68,7 +68,33 @@ const path=require('node:path');
       assert.equal((await pet.evaluate(()=>window.petAPI.setSize('medium'))).ok,true,`${type} releases drag lock`);
       assert.equal(await pet.locator('#pet').getAttribute('data-action'),'','cancelled gesture never clicks');
     }
-    console.log('PASS: native cursor delta, stationary cursor with shifted renderer events, both directions, release/cancel/lost capture, persistence and renderer gesture.');
+    // A new drag start must recover even if the previous pointerup was lost.
+    await app.evaluate(({BrowserWindow,screen})=>{
+      globalThis.dragCursor={x:362,y:427};
+      BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('pet.html')).setPosition(200,150);
+    });
+    await send('start');
+    await app.evaluate(()=>{globalThis.dragCursor={x:382,y:437};});
+    await send('move');
+    const firstStale=await position();
+    await send('start');
+    await app.evaluate(()=>{globalThis.dragCursor={x:402,y:447};});
+    await send('move');
+    assert.notDeepEqual(await position(),firstStale,'a fresh start must replace a stale drag offset');
+    await send('cancel');
+    // 布布 is part of the same pet window and is also a drag handle.
+    await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('pet.html')).setPosition(200,150));
+    const buddy=pet.locator('#buddy');
+    await buddy.hover();
+    const buddyBox=await buddy.boundingBox();
+    await pet.mouse.down();await pet.evaluate(()=>window.petAPI.getState());
+    await app.evaluate(()=>{globalThis.dragCursor={x:382,y:437};});
+    await pet.mouse.move(buddyBox.x+buddyBox.width/2+20,buddyBox.y+buddyBox.height/2+10);
+    await pet.mouse.up();
+    assert.deepEqual(await position(),[180,140],'dragging from 布布 moves the pet window');
+    assert.notEqual(await pet.locator('#buddy').getAttribute('data-link'),'poke','dragging 布布 must not trigger its poke reaction');
+    await send('end');
+    console.log('PASS: native cursor delta, stationary cursor with shifted renderer events, both directions, release/cancel/lost capture, persistence, stale-start recovery, 布布 drag and renderer gesture.');
   }finally{if(app)await app.close();await fs.rm(profile,{recursive:true,force:true});}
 })().catch(e=>{console.error(e);process.exitCode=1;});
 
