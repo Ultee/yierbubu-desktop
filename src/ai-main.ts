@@ -37,6 +37,12 @@ export function installAI(host:Host){
     }catch{if(token===generation)error='暂时无法聊天，请稍后重试。';return {ok:false,error:'暂时无法聊天，请稍后重试。'};}
     finally{if(token===generation){busy=false;changed();}}
   }
+  async function sendChat(text:string):Promise<AIResult>{
+    // A user message takes priority over a background dialogue/proactive call.
+    // cancel() also clears any stuck single-request lock before retrying.
+    cancel();
+    return send(text);
+  }
   async function actionReply(action:string):Promise<AIResult>{
     const now=Date.now();
     if(busy||testBusy||now-lastAction<2000)return {ok:false,error:'跳过'};
@@ -78,7 +84,7 @@ export function installAI(host:Host){
   });
   ipcMain.handle('chat-send',(e,text:unknown)=>{
     if(!own(e,chat)||typeof text!=='string'||text.trim().length===0||text.length>4000)return {ok:false,error:'请输入1到4000字的消息。'};
-    return send(text.trim());
+    return sendChat(text.trim());
   });
   ipcMain.handle('chat-clear',e=>{
     if(!own(e,chat)&&!own(e,host.settings()))return {ok:false,error:'无效请求'};

@@ -186,6 +186,12 @@ export class AiService {
     this.active = controller;
     let timedOut = false;
     const timer = setTimeout(() => { timedOut = true; controller.abort(); }, 30000);
+    // Even if a provider ignores abort while streaming a body, never leave
+    // the single-request lock held forever.
+    const lifetime = setTimeout(() => {
+      if (this.active === controller) this.active = null;
+      controller.abort();
+    }, 35000);
     try {
       const url = config.baseUrl.endsWith('/chat/completions') ? config.baseUrl : `${config.baseUrl}/chat/completions`;
       const response = await fetch(url, {
@@ -224,6 +230,7 @@ export class AiService {
       return { ok: false, error: safeError(error) };
     } finally {
       clearTimeout(timer);
+      clearTimeout(lifetime);
       if (this.active === controller) this.active = null;
       // Also closes unread bodies on rejected, redirected or oversized responses.
       controller.abort();
