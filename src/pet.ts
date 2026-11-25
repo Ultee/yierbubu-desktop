@@ -57,11 +57,22 @@ async function refresh(){
     const warning=document.getElementById('warning')!;warning.hidden=!state.warning;warning.textContent=state.warning;
   }catch{text('status','暂时无法读取设置，请通过右键菜单重试');}
 }
+function setPassthrough(interactive:boolean){
+  const ignore=!interactive;
+  if(lastIgnore!==ignore){lastIgnore=ignore;window.petAPI.passthrough(ignore);}
+}
 document.addEventListener('mousemove',event=>{
-  const active=!!gesture||!!(event.target as Element).closest('#pet,#card,#speech,#buddy');
-  if(lastIgnore!==!active){lastIgnore=!active;window.petAPI.passthrough(!active);}
+  // Forwarded mousemove events can be retargeted to <body> while the window
+  // is click-through, so hit-test the coordinates instead of trusting target.
+  const target=document.elementFromPoint(event.clientX,event.clientY);
+  setPassthrough(!!gesture||!!target?.closest('#pet,#card,#speech,#buddy,.dialogue'));
 });
-document.addEventListener('mouseleave',()=>{if(!gesture){window.petAPI.passthrough(true);lastIgnore=true;}});
+document.addEventListener('mouseleave',()=>{if(!gesture)setPassthrough(false);});
+window.petAPI.onCursorProbe(({x,y})=>{
+  if(gesture)return;
+  const target=document.elementFromPoint(x,y);
+  setPassthrough(!!target?.closest('#pet,#card,#speech,#buddy,.dialogue'));
+});
 function react(){
   const action=chooseAction(preferences.actions,previousAction);if(!action)return;
   stopAction();clearLink();stopDialogue();stopFeed();previousAction=action;

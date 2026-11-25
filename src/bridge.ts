@@ -30,6 +30,7 @@ export interface PetBridge {
   onEggAction(listener:(egg:string)=>void):void;
   onFeed(listener:(snack:string)=>void):void;
   onWander(listener:(direction:string)=>void):void;
+  onCursorProbe(listener:(point:{x:number;y:number})=>void):void;
   getVoice():Promise<VoicePublicState>;
   saveVoice(config:VoiceConfig,key?:string,removeKey?:boolean):Promise<{ok:boolean;error?:string}>;
   testVoice(who:VoiceSpeaker):Promise<VoiceResult>;

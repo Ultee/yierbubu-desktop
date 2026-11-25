@@ -17,7 +17,7 @@ app.setName('SalaryPet');
 app.commandLine.appendSwitch('autoplay-policy','no-user-gesture-required');
 let pet:BrowserWindow|null=null,settings:BrowserWindow|null=null,tray:Tray|null=null;
 let store:Store,data:Stored={config:null,position:null,preferences:normalizePreferences(undefined)},warning='';
-let dragOffset:{x:number;y:number}|null=null,dragMoved=false,positionTimer:ReturnType<typeof setTimeout>|null=null;
+let dragOffset:{x:number;y:number}|null=null,dragMoved=false,positionTimer:ReturnType<typeof setTimeout>|null=null,cursorTimer:ReturnType<typeof setInterval>|null=null;
 let walking=false,walkStep:ReturnType<typeof setTimeout>|null=null,nextWanderAt=0,systemLocked=false;
 powerMonitor.on('lock-screen',()=>{systemLocked=true;stopWalk();});
 powerMonitor.on('unlock-screen',()=>{systemLocked=false;});
@@ -139,6 +139,13 @@ app.whenReady().then(()=>{
   pet.once('ready-to-show',()=>{const [x,y]=pet?.getPosition()??[0,0];pet?.setBounds({x,y,width,height});pet?.showInactive();});
   pet.on('move',()=>{if(positionTimer)clearTimeout(positionTimer);positionTimer=setTimeout(persistPosition,350);});
   tray=new Tray(icon());tray.setToolTip('秒薪桌宠 · 右键选择“查看”显示收入');tray.setContextMenu(menu());tray.on('double-click',openSettings);
+  // Forward mousemove alone is not enough: when the window moves under a
+  // stationary cursor or the first move is missed, a click can pass through.
+  cursorTimer=setInterval(()=>{
+    if(!pet||pet.isDestroyed()||dragOffset)return;
+    const [x,y]=pet.getPosition(),cursor=screen.getCursorScreenPoint();
+    pet.webContents.send('cursor-probe',{x:cursor.x-x,y:cursor.y-y});
+  },50);
   const reposition=()=>{if(pet){const [x,y]=pet.getPosition();pet.setPosition(...Object.values(clamped(x,y)) as [number,number]);}};
   screen.on('display-removed',reposition);screen.on('display-metrics-changed',reposition);powerMonitor.on('resume',broadcast);
   if(!data.config)openSettings();
@@ -191,5 +198,5 @@ ipcMain.on('drag',(event,action:unknown)=>{
   }
 });
 app.on('window-all-closed',()=>{});
-app.on('before-quit',()=>{ai?.dispose();voice?.dispose();if(positionTimer)clearTimeout(positionTimer);if(affinityTimer)clearInterval(affinityTimer);if(walkStep)clearTimeout(walkStep);persistPosition();tray?.destroy();});
+app.on('before-quit',()=>{ai?.dispose();voice?.dispose();if(positionTimer)clearTimeout(positionTimer);if(affinityTimer)clearInterval(affinityTimer);if(cursorTimer)clearInterval(cursorTimer);if(walkStep)clearTimeout(walkStep);persistPosition();tray?.destroy();});
 }

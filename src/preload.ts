@@ -26,6 +26,7 @@ const api:PetBridge={
   onEggAction:listener=>{ipcRenderer.on('egg-action',(_event,egg:unknown)=>{if(typeof egg==='string')listener(egg);});},
   onFeed:listener=>{ipcRenderer.on('feed',(_event,snack:unknown)=>{if(typeof snack==='string')listener(snack);});},
   onWander:listener=>{ipcRenderer.on('wander',(_event,direction:unknown)=>{if(typeof direction==='string')listener(direction);});},
+  onCursorProbe:listener=>{ipcRenderer.on('cursor-probe',(_event,point:unknown)=>{const p=point as {x?:unknown;y?:unknown};if(p&&typeof p.x==='number'&&typeof p.y==='number'&&Number.isFinite(p.x)&&Number.isFinite(p.y))listener({x:p.x,y:p.y});});},
   getVoice:()=>ipcRenderer.invoke('voice-state'),
   saveVoice:(config,key,removeKey)=>ipcRenderer.invoke('voice-save',config,key,removeKey),
   testVoice:who=>ipcRenderer.invoke('voice-test',who),

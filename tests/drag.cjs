@@ -10,6 +10,19 @@ const path=require('node:path');
     app=await electron.launch(process.env.SALARY_PET_EXECUTABLE?{executablePath:process.env.SALARY_PET_EXECUTABLE,args:[],env}:{args:[path.resolve('.')],env});
     const pet=app.windows().find(p=>p.url().endsWith('pet.html'))??await app.waitForEvent('window',p=>p.url().endsWith('pet.html'));
     await pet.waitForLoadState();
+    await app.evaluate(({ipcMain})=>{globalThis.__passthrough=[];ipcMain.on('passthrough',(_e,ignore)=>globalThis.__passthrough.push(ignore));});
+    const probeBox=await pet.locator('#pet').boundingBox();
+    await app.evaluate(({BrowserWindow,screen},b)=>{
+      const w=BrowserWindow.getAllWindows().find(w=>w.webContents.getURL().endsWith('pet.html'));
+      w.setPosition(200,150);
+      globalThis.dragCursor={x:200+b.x+b.width/2,y:150+b.y+b.height/2};
+      screen.getCursorScreenPoint=()=>({...globalThis.dragCursor});
+    },probeBox);
+    await new Promise(resolve=>setTimeout(resolve,250));
+    assert.equal((await app.evaluate(()=>globalThis.__passthrough)).at(-1),false,'cursor probe over the pet disables click-through without mousemove');
+    await app.evaluate(()=>{globalThis.dragCursor={x:0,y:0};});
+    await new Promise(resolve=>setTimeout(resolve,250));
+    assert.equal((await app.evaluate(()=>globalThis.__passthrough)).at(-1),true,'cursor probe outside restores click-through');
     await app.evaluate(({BrowserWindow,screen})=>{
       BrowserWindow.getAllWindows().filter(w=>!w.webContents.getURL().endsWith('pet.html')).forEach(w=>w.close());
       // Only substitute the OS cursor. Keep IPC, clamp, native window and persistence real.
